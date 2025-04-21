@@ -7,14 +7,8 @@ RUN apt-get update && \
         ca-certificates \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Dynamically set JAVA_HOME based on installed java
-RUN update-alternatives --install /usr/bin/java java /usr/lib/jvm/java-11-openjdk-amd64/bin/java 1 && \
-    export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java)))) && \
-    echo "export JAVA_HOME=$JAVA_HOME" >> /etc/profile && \
-    echo "JAVA_HOME=$JAVA_HOME" >> /etc/environment
-
-# Set ENV again for build/runtime layers
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk
+# Set JAVA_HOME for PySpark
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV PATH=$JAVA_HOME/bin:$PATH
 
 # Set working directory
