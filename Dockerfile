@@ -1,8 +1,14 @@
 FROM python:3.10-slim
 
 # Install Java (required by Spark)
-RUN apt-get update && apt-get install -y openjdk-11-jdk curl && \
-    apt-get clean
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    openjdk-11-jdk \
+    curl \
+    ca-certificates \
+    gnupg \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV SPARK_VERSION=3.5.0
