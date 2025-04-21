@@ -34,4 +34,4 @@ COPY . .
 EXPOSE 5000
 
 # Launch your app directly
-CMD ["python", "app/app.py"]
+CMD ["cd", "app", "&&", "python", "app.py"]
