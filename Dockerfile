@@ -21,7 +21,7 @@ ENV JAVA_HOME=/opt/java
 ENV PATH=$JAVA_HOME/bin:$PATH
 
 # Set working directory
-WORKDIR /app
+WORKDIR /lupadigital
 
 # Install Python dependencies
 COPY requirements.txt .

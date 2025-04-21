@@ -36,7 +36,7 @@ if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         .config("spark.executor.memory", "4g") \
         .getOrCreate()
     
-    df = spark.read.parquet("data/news_processed")
+    df = spark.read.parquet("../data/news_processed")
 
 globalVar = {
             "search_done": False,
