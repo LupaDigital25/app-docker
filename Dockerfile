@@ -7,8 +7,17 @@ RUN apt-get update && \
         ca-certificates \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Set JAVA_HOME for PySpark
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+# Set JAVA_HOME for PySpark (linux)
+#ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+#ENV PATH=$JAVA_HOME/bin:$PATH
+
+# Set JAVA_HOME for PySpark (mac)
+#ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64
+#ENV PATH=$JAVA_HOME/bin:$PATH
+
+# Dynamically set JAVA_HOME using readlink so it works for both amd64 and arm64
+RUN ln -s $(readlink -f $(which java) | sed "s:/bin/java::") /opt/java
+ENV JAVA_HOME=/opt/java
 ENV PATH=$JAVA_HOME/bin:$PATH
 
 # Set working directory
