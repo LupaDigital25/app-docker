@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+    <meta charset="utf-8">
+    <title>Lupa Digital</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="" name="keywords">
+    <meta content="" name="description">
+
+    <!-- Favicon -->
+    <link href="{{ url_for('static', filename='img/favicon.ico') }}" rel="icon">
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet"> 
+
+    <!-- Icon Font Stylesheet -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Libraries Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='lib/animate/animate.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='lib/lightbox/css/lightbox.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='lib/owlcarousel/assets/owl.carousel.min.css') }}">
+
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+
+    <!-- Template Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Script for Plotly plots-->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <!-- Overwrite testimonial-carousel navigations buttons settings -->
+    <style>
+        /* container */
+        .owl-nav {
+            display: flex !important;
+            position: relative;
+            justify-content: center;
+            gap: 1.5em;
+            z-index: 10;
+            margin-top: 0.7em;
+            margin-bottom: -3.7em;
+        }
+
+        /* buttons */
+        .owl-prev, .owl-next {
+            color: white;
+            font-size: 2em;
+        }
+
+        /* hover buttons */
+        .owl-prev:hover, .owl-next:hover {
+            color: #4345B7;
+        }
+    </style>
+
+    <!-- Style for topic recommendations when there are no results -->
+    <style>
+        .recomendations a {
+            font-weight: normal;
+        }
+    </style>
+
+    <!-- JavaScript to automatically scroll to topic relation search -->
+    {% if scroll_to_relation %}
+    <style>
+        #topic-relation {
+            scroll-margin-top: 1em;
+        }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+                let target = document.getElementById("topic-relation");
+                
+                // Scroll to the target section slowly with a smooth behavior
+                {% if globalVar['topicrelation_exists'] %}
+                target.scrollIntoView({ behavior: "smooth", block: "start" });
+                {% else %}
+                target.scrollIntoView({ behavior: "smooth", block: "end" });
+                {% endif %}
+        });
+    </script>
+    {% endif %}
+
+    <!-- Topic Search Overlay -->
+    <style>
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(33, 36, 177, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-xxl bg-white p-0">
+        <!-- Spinner Start -->
+        <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+            <div class="spinner-grow text-primary" style="width: 3rem; height: 3rem;" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+        <!-- Spinner End -->
+        <!-- Loading Search Start -->
+        <div id="loadingIndicator" style="display: none;" class="loading-overlay">
+            <div class="text-center">
+                <div class="spinner-border text-white" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-white">A analisar {{ globalVar['total_amount_of_news'] }} notícias...</p>
+            </div>
+        </div>        
+        <!-- Loading Search End -->
+        <!-- Loading Graph Start -->
+        <div id="loadingIndicatorGraph" style="display: none;" class="loading-overlay">
+            <div class="text-center">
+                <div class="spinner-border text-white" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-white">A carregar o grafo...</p>
+            </div>
+        </div>        
+         <!-- Loading Graph End -->
+
+
+        <!-- Navbar & Hero Start -->
+        <div class="container-xxl position-relative p-0">
+            <nav class="navbar navbar-expand-lg navbar-light px-4 px-lg-5 py-3 py-lg-0">
+                <a href="/" class="navbar-brand p-0">
+                    <h1 class="m-0"><img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo"></i>Lupa<span class="fs-5">Digital</span></h1>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                    <span class="fa fa-bars"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarCollapse">
+                    <div class="navbar-nav ms-auto py-0">
+                        <a href="/" class="nav-item nav-link">Início</a>
+                        <a href="/sobre" class="nav-item nav-link active">Sobre</a>
+                        {% if globalVar['zero_results'] %}
+                            <a href="javascript:void(0);" class="nav-item nav-link" style="cursor: not-allowed;" data-bs-toggle="tooltip" title="Nada por aqui..." data-bs-placement="bottom">Grafo</a>
+                        {% else %}
+                            <a href="javascript:void(0)" onclick="openGraph()" class="nav-item nav-link">Grafo</a>
+                        {% endif %}
+                    </div>
+                    <div class="d-none d-lg-flex">
+                        <button type="button" class="btn text-secondary ms-3" onclick="window.location.href='/'">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        {% if globalVar['query'] %}
+                        <a href="javascript:void(0);" style="pointer-events: none; cursor: default; box-shadow: inset 0 0 0 2px rgb(82, 118, 237); color: rgb(82, 118, 237);" class="nav-item nav-link btn rounded-pill py-2 px-4 ms-3">{{ globalVar['query'] }}</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </nav>
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                  var tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+                  tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+                    new bootstrap.Tooltip(tooltipTriggerEl);
+                  });
+                });
+            </script>
+
+
+            <div class="container-xxl py-5 bg-primary hero-header mb-5">
+                <div class="container my-5 py-5 px-lg-5">
+                    <div class="row g-5 py-5">
+                        <div class="col-12 text-center">
+                            <img class="animated zoomIn" src="data:image/png;base64,{{ globalVar['wordcloud'] }}" alt="Topic WordCloud" style="max-width: 100%; height: auto; display: block; margin: 0 auto; margin-top: -6em;">
+                            <hr class="bg-white mx-auto mt-0" style="width: 90px;">
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb justify-content-center">
+                                    <li class="breadcrumb-item text-white active" aria-current="page">Resultados da Pesquisa</li>
+                                </ol>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Navbar & Hero End -->
+
+        {% if globalVar["zero_results"]%}
+        <!-- About Start -->
+        <div class="container-xxl py-5">
+            <div class="container px-lg-5">
+                <div class="row g-5">
+                    <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
+                        <div class="section-title position-relative mb-4 pb-2">
+                            <h6 class="position-relative text-primary ps-4">Resultados</h6>
+                            <h2 class="mt-2">Nenhum Resultado Encontrado</h2>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 wow fadeInUp mt-0" data-wow-delay="0.1s">
+                        <p class="mb-3" style="text-align: justify;">Infelizmente, não foram encontrados quaisquer resultados relativos à pesquisa <u>{{ globalVar['query'] }}</u> nas {{ globalVar['total_amount_of_news'] }} notícias analisadas.<br>Isto pode dever-se a razões como:</p>
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <h6 class="mb-4 text-center"><i class="fa fa-times text-primary me-2"></i>Tópico não disponível</h6>
+                            </div>
+                            <div class="col-sm-6">
+                                <h6 class="mb-4 text-center"><i class="fa fa-times text-primary me-2"></i>Erro ortográfico</h6>
+                            </div>
+                        </div>
+                        <p class="mb-0" style="text-align: justify;">Assim, pode optar por uma nova pesquisa ou explorar alguns exemplos de tópicos em diversas vertentes, como Cultura, Desporto, Economia, Política ou Temáticas.</p>
+                        <div class="d-flex justify-content-center align-items-center mt-4">
+                            <a class="btn btn-primary rounded-pill px-4 me-3 mb-3" href="/">Nova Pesquisa</a>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 wow fadeInUp mt-0" data-wow-delay="0.1s">
+                        <div class="row g-3 recomendations">
+                            <h6 class="mb-2"><i class="fa fa-check text-primary me-2"></i>Cultura:
+                                <a href="javascript:void(0);" onclick="redirectToSearch('fado')">fado</a><a>, </a>
+                                <a href="javascript:void(0);" onclick="redirectToSearch('Eurovisão')">Eurovisão</a><a>, </a>
+                                <a href="javascript:void(0);" onclick="redirectToSearch('Fernando Pessoa')">Fernando Pessoa</a>
+                            </h6>
+                            <h6 class="mb-2"><i class="fa fa-check text-primary me-2"></i>Desporto:
+                                <a href="javascript:void(0);" onclick="redirectToSearch('futebol')">futebol</a><a>, </a>
+                                <a href="javascript:void(0);" onclick="redirectToSearch('Benfica')">Benfica</a><a>, </a>
+                                <a href="javascript:void(0);" onclick="redirectToSearch('José Mourinho')">José Mourinho</a>
+                            </h6>
+                            <h6 class="mb-2"><i class="fa fa-check text-primary me-2"></i>Economia:
+                                <a href="javascript:void(0);" onclick="redirectToSearch('Banco de Portugal')">Banco de Portugal</a><a>, </a>
+                                <a href="javascript:void(0);" onclick="redirectToSearch('inflação')">inflação</a><a>, </a>
+                                <a href="javascript:void(0);" onclick="redirectToSearch('Sonae')">Sonae</a>
+                            </h6>
+                            <h6 class="mb-2"><i class="fa fa-check text-primary me-2"></i>Política:
+                                <a href="javascript:void(0);" onclick="redirectToSearch('governo')">governo</a><a>, </a>
+                                <a href="javascript:void(0);" onclick="redirectToSearch('PS')">PS</a><a>, </a>
+                                <a href="javascript:void(0);" onclick="redirectToSearch('António Costa')">António Costa</a>
+                            </h6>
+                            <h6 class="mb-2"><i class="fa fa-check text-primary me-2"></i>Temáticas:
+                                <a href="javascript:void(0);" onclick="redirectToSearch('saúde')">saúde</a><a>, </a>
+                                <a href="javascript:void(0);" onclick="redirectToSearch('educação')">educação</a><a>, </a>
+                                <a href="javascript:void(0);" onclick="redirectToSearch('migração')">migração</a>
+                            </h6>
+                        </div>
+                    </div>
+                    <script>
+                        function redirectToSearch(inputValue) {
+                            inputValue = inputValue.trim();
+
+                            // Show the loading indicator
+                            document.getElementById("loadingIndicator").style.display = "flex";
+
+                            // Disable scrolling
+                            document.body.style.overflow = 'hidden';
+
+                            // Delay to allow the loader to be visible before redirect
+                            setTimeout(function() {
+                                window.location.href = `/pesquisa?topico=${encodeURIComponent(inputValue)}`;
+                            }, 500);
+                        }
+                        // Handle back navigation: reset the page state
+                        window.addEventListener("pageshow", function(event) {
+                            if (event.persisted || performance.getEntriesByType("navigation")[0].type === "back_forward") {
+                                // Force a hard reload to ensure page is fresh
+                                window.location.reload(true); // true is legacy, but still respected by some browsers
+                            }
+                        });
+                    </script>
+                </div>
+            </div>
+        </div>
+        <!-- About End -->
+        {% else %}
+        <!-- About Start -->
+        <div class="container-xxl py-5">
+            <div class="container px-lg-5">
+                <div class="row g-5">
+                    <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.1s">
+                        <div class="section-title position-relative mb-4 pb-2">
+                            <h6 class="position-relative text-primary ps-4">Resultados</h6>
+                            <h2 class="mt-2">Foram encontrados {{ globalVar['query_amountofnews'] }} resultados!</h2>
+                        </div>
+                        <p class="mb-3" style="text-align: justify;">
+                            Foram encontradas {{ globalVar['query_amountofnews'] }} notícias sobre o tópico <u>{{ globalVar['query'] }}</u>, com a primeira notícia a {{ globalVar['query_firstnews'] }}.
+                            <br>Pode agora explorar as fontes de informação que mais escreveram sobre o seu tópico e como é que a sua perceção tem vindo a evoluir ao longo do tempo, através dos gráficos interativos.
+                        </p>
+                        <div class="row g-3">
+                            <div class="col-sm-12">
+                                <h6 class="mb-3"><i class="fa fa-check text-primary me-2"></i>Gráfico circular</h6>
+                                <h6 class="mb-3"><i class="fa fa-check text-primary me-2"></i>Série temporal</h6>
+                            </div>
+                        </div>
+                        <p class="mb-3" style="text-align: justify;">Passe com o rato sobre os gráficos para descobrir mais informações.</p>
+                    </div>
+                    <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.1s">
+                        {{ globalVar['pie_sources'] | safe }}
+                    </div>
+                </div>
+                <div class="row g-5 wow zoomIn" data-wow-delay="0.1s">
+                    {{ globalVar['ts_news'] | safe }}
+                </div>
+            </div>
+        </div>
+        <!-- About End -->
+
+
+        <!-- Custom Word Search Start -->
+        <div class="container-xxl py-5" data-wow-delay="0.1s">
+            <div class="container px-lg-5">
+                <div class="section-title position-relative text-center mb-5 pb-2 wow fadeInUp" data-wow-delay="0.1s">
+                    <h6 class="position-relative d-inline text-primary ps-4">Conexões Entre Tópicos</h6>
+                    <h2 class="mt-2">Explore as Ligações Entre Diferentes Tópicos</h2>
+                </div>
+                <div class="row align-items-center" style="height: 250px;">
+                    <div class="col-12 col-md-6">
+                        <h3>Descubra Ligações a <u>{{ globalVar['query'] }}</u></h3>
+                        <small style="text-align: justify; display: block;">Escolha um tópico para verificar se está relacionado com <u>{{ globalVar['query'] }}</u>, e se estiver, qual é a perceção dessa relação, as fontes de informação que a mais mencionam e como é que esta tem vindo a evoluir ao longo dos anos.</small>
+                        <div class="position-relative w-100 mt-3 rounded-pill" style="border:2px solid #2124B1;">
+                            <input id="relationInput" class="form-control border-0 rounded-pill w-100 ps-4 pe-5" type="text" placeholder="Escolha um tópico para verificar..." style="height: 48px;">
+                            <button onclick="redirectToRelation()" type="submit" class="btn shadow-none position-absolute top-0 end-0 mt-1 me-2"><i class="fa fa-search text-primary fs-4"></i></button>
+                        </div>
+                        <script>
+                            document.getElementById("relationInput").addEventListener("keydown", function(event) {
+                                    if (event.key === "Enter") {
+                                        event.preventDefault();
+                                        redirectToRelation();
+                                    }
+                                });
+
+                            function redirectToRelation() {
+                                let inputValue = document.getElementById("relationInput").value.trim();
+                                if (inputValue) {
+                                    window.location.href = `/relacao?entre=${inputValue}`;
+                                } else {
+                                    alert("Por favor, digite um tópico.");
+                                }
+                            }
+                        </script>
+                    </div>
+                    <div class="col-md-6 text-center mb-n5 d-none d-md-block">
+                        <img class="img-fluid mt-0" style="height: 250px;" src="{{ url_for('static', filename='img/ligacoes.png') }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Custom Word Search End -->
+        {% endif %}
+        <!-- Custom Word Info Start -->
+        {% if globalVar['topicrelation'] %}
+        <div id="topic-relation" class="container-xxl py-5" data-wow-delay="0.1s">
+            <div class="container px-lg-5">
+                <div class="row g-5">
+                    <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
+                        <div class="section-title position-relative mb-4 pb-2">
+                            <h2 class="mt-2"><u>{{ globalVar['query'] }}</u> & <u>{{ globalVar['related_topic'] }}</u></h2>
+                        </div>
+                        {% if not globalVar['topicrelation_exists'] %}
+                            <p class="mb-3" style="text-align: justify;">Não foi encontrada qualquer relação entre <u>{{ globalVar['query'] }}</u> e <u>{{ globalVar['related_topic'] }}</u> nas {{ globalVar['query_amountofnews'] }} notícias sobre <u>{{ globalVar['query'] }}</u>.<br>Isto pode dever-se a razões como:</p>
+                            <div class="row g-3">
+                                <div class="col-sm-4">
+                                    <h6 class="mb-4 text-center"><i class="fa fa-times text-primary me-2"></i>Relação inexistente</h6>
+                                </div>
+                                <div class="col-sm-4">
+                                    <h6 class="mb-4 text-center"><i class="fa fa-times text-primary me-2"></i>Menções insuficentes sobre <u>{{ globalVar['related_topic'] }}</u></h6>
+                                </div>
+                                <div class="col-sm-4">
+                                    <h6 class="mb-4 text-center"><i class="fa fa-times text-primary me-2"></i>Erro ortográfico</h6>
+                                </div>
+                            </div>
+                            <p class="mb-0" style="text-align: justify;">Pode agora optar por verificar outra ligação entre tópicos à sua escolha, ou uma aleatória, por exemplo {{ globalVar['recomendations_topicrelation'] | safe }}.</p>
+                        {% else %}
+                            <p class="mb-4" style="text-align: justify;">Nas {{ globalVar['query_amountofnews'] }} notícias sobre <u>{{ globalVar['query'] }}</u>, foram encontradas {{ globalVar['count_topicrelation'] }} menções em relação a <u>{{ globalVar['related_topic'] }}</u>.<br>Utilizando as ferramentas da Lupa Digital disponíveis poderá agora verificar quanto à relação:</p>
+                            <div class="row g-3">
+                                <div class="col-sm-3"><h6 class="mb-5 text-center"><i class="fa fa-check text-primary me-2"></i>Fontes de Informação</h6></div>
+                                <div class="col-sm-3"><h6 class="mb-5 text-center"><i class="fa fa-check text-primary me-2"></i>Perceção do Sentimento</h6></div>
+                                <div class="col-sm-3"><h6 class="mb-5 text-center"><i class="fa fa-check text-primary me-2"></i>Evolução da Relação</h6></div>
+                                <div class="col-sm-3"><h6 class="mb-5 text-center"><i class="fa fa-check text-primary me-2"></i>Notícias Arquivadas</h6></div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if globalVar['topicrelation_exists'] %}
+            <div class="container px-lg-5 wow fadeInUp" data-wow-delay="0.1s">
+                <div class="row g-4">
+                    <div id="relation-leftcol" class="col-12 col-md-3" style="position: relative; overflow-y: auto;">
+                        <iframe srcdoc='{{ globalVar["sources_topicrelation"] }}'
+                                scrolling="no"
+                                style="height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; position: absolute; top: -10%; left: 0%; z-index: 1;">
+                        </iframe>
+                        <div style="position: absolute; top: 75%; left: 5%; width: 90%; z-index: 2;">
+                            <p class="text-center" style="padding-bottom: 0px; margin-bottom: 0px; color: black;">Sentimento</p>
+                            <div id="bar" style="width: 100%; height: 20px; background: linear-gradient(to right, rgb(204, 0, 0), rgb(239, 83, 80), rgb(204, 204, 204), rgb(102, 187, 106), rgb(0, 200, 81)); border-radius: 5px; position: relative; z-index: 2;">
+                                
+                                <div style="position: absolute; top: 20px; left: 2%; transform: translateX(-50%); font-size: 20px; color: black;">&#8722;</div>
+
+                                <div id="arrow" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-size: 20px; color: black;">▲</div>
+
+                                <div style="position: absolute; top: 20px; left: 98%; transform: translateX(-50%); font-size: 20px; color: black;">&#43;</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="relation-rightcol" class="col-12 col-md-9 align-content-center" style="padding-right: 1em;">
+                        {{ globalVar['ts_topicrelation'] | safe }}
+                    </div>                   
+                </div>
+            </div>
+            <script>
+                function updateSentiment(sentiment) {
+                    let percentage = ((sentiment + 1) / 2) * 100;
+                    document.getElementById("arrow").style.left = percentage + "%";
+                }
+                updateSentiment({{ globalVar['sentiment_topicrelation'] }});
+            </script>
+            <script>
+                function matchColumnHeights() {
+                    const leftCol = document.getElementById('relation-leftcol');
+                    const rightCol = document.getElementById('relation-rightcol');
+
+                    if (leftCol && rightCol) {
+                        leftCol.style.height = rightCol.offsetHeight + 'px';
+                    }
+                }
+
+                window.addEventListener('load', matchColumnHeights);
+                window.addEventListener('resize', matchColumnHeights);
+
+                const iframe = document.querySelector('#relation-rightcol iframe');
+                if (iframe) {
+                    iframe.addEventListener('load', matchColumnHeights);
+                }
+            </script>
+            {% endif %}
+        </div>
+        
+        {% if globalVar['topicrelation_exists'] %}
+        <div class="container-xxl bg-primary testimonial py-4 wow fadeInUp" data-wow-delay="0.1s">
+            <small class="text-white d-block text-center" style="text-align: center; padding-top: 1em;">Encontre aqui algumas notícias arquivadas pelo <a href="https://arquivo.pt" target="_blank" style="text-decoration: none; color: inherit;">Arquivo.pt</a> que contêm a relação <u>{{ globalVar['query'] }}</u> & <u>{{ globalVar['related_topic'] }}</u>.</small>
+            <div class="container px-lg-5" style="padding-bottom:3.5rem; padding-top: 2em;">
+                <div class="owl-carousel testimonial-carousel">
+                    {{ globalVar['news_topicrelation'] | safe }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+        <!-- Custom Word Info End -->
+
+        <!-- Start Redirect to Graph -->
+        {% if not globalVar["zero_results"]%}
+        <div class="container-xxl py-5">
+            <div class="border-top border-light my-4"></div>
+            <div class="container px-lg-5">
+                <div class="row g-4">
+                    <div class="col-lg-12 col-md-6 wow zoomIn" data-wow-delay="0.1s">
+                        <div class="service-item d-flex flex-column justify-content-center text-center rounded">
+                            <div class="service-icon flex-shrink-0">
+                                <i class="fa fa-network-wired fa-2x"></i>
+                            </div>
+                            <h5 class="mb-12">Aprofunde as Conexões</h5>
+                            <p>Já explorou as principais fontes de informação e analisou como as notícias evoluíram ao longo do tempo sobre este tópico. Se não quiser verificar a presença de mais relações à sua escolha, dê o próximo passo: visualize o grafo de relações e descubra quais são os tópicos que mais se relacionam com a sua pesquisa.</p>
+                            <a class="btn px-3 mt-auto mx-auto" href="javascript:void(0)" onclick="openGraph()">Ver Grafo</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        <!-- End Redirect to Graph -->
+
+        <!-- Footer Start -->
+        <div class="container-fluid bg-primary text-light smallfooter wow fadeIn mt-5" data-wow-delay="0.1s" id="footer-banner">
+            <div class="container px-lg-5">
+                <div class="copyright">
+                    <div class="row">
+                        <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                            &copy; <a class="border-bottom" href="#">Lupa Digital</a>. Todos os direitos reservados.
+                        </div>
+                        <div class="col-md-6 text-center text-md-end">
+                            <div class="footer-menu">
+                                <a href="/">Início</a>
+                                <a href="#">Sobre</a>
+                                <a href="javascript:void(0)" onclick="openGraph()">Grafo</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer End -->
+
+
+        <!-- Back to Top -->
+        <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top pt-2"><i class="bi bi-arrow-up"></i></a>
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='lib/wow/wow.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='lib/easing/easing.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='lib/waypoints/waypoints.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='lib/owlcarousel/owl.carousel.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='lib/isotope/isotope.pkgd.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='lib/lightbox/js/lightbox.min.js') }}"></script>
+
+    <!-- Template Javascript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <!-- Overwrite testimonial-carousel settings -->
+    <script>
+        $(document).ready(function(){
+            $(".testimonial-carousel").owlCarousel('destroy');
+            $(".testimonial-carousel").owlCarousel({
+                autoplay: false,
+                smartSpeed: 1000,
+                margin: 25,
+                dots: false,
+                loop: false,
+                center: true,
+                nav: true,
+                responsive: {
+                    0:{
+                        items:1
+                    },
+                    576:{
+                        items:1
+                    },
+                    768:{
+                        items:2
+                    },
+                    992:{
+                        items:3
+                    }
+                }
+            });
+            $(".owl-prev").text("<");
+            $(".owl-next").text(">");
+        });
+    </script>
+    
+    <!-- Loading the Graph Page Script-->
+    <script>
+        function openGraph() {
+            {% if globalVar['query'] != globalVar['graph_html'][0] %}
+            
+            // Show the loading indicator
+            document.getElementById("loadingIndicatorGraph").style.display = "flex";
+
+            // Disable scrolling
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.body.style.overflow = 'hidden';
+
+            // Delay to allow the loader to be visible before redirect
+            setTimeout(function() {
+                window.location.href = `/grafo`;
+            }, 500);
+            {% else %}
+            setTimeout(function() {
+                window.location.href = `/grafo`;
+            }, 0);
+            {% endif %}
+        }
+    </script>
+    
+</body>
+
+</html>

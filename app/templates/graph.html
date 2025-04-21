@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+    <meta charset="utf-8">
+    <title>Lupa Digital</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="" name="keywords">
+    <meta content="" name="description">
+
+    <!-- Favicon -->
+    <link href="{{ url_for('static', filename='img/favicon.ico') }}" rel="icon">
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet"> 
+
+    <!-- Icon Font Stylesheet -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Libraries Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='lib/animate/animate.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='lib/lightbox/css/lightbox.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='lib/owlcarousel/assets/owl.carousel.min.css') }}">
+
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+
+    <!-- Template Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Style for Graph Help Button -->
+    <style>
+        .button-graph {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .help-text {
+            opacity: 0;
+            max-width: 0;
+            overflow: hidden;
+            transition: opacity 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .button-graph:hover .help-text {
+            opacity: 1;
+            max-width: 100%;
+        }
+    </style>
+
+    <style>
+        html, body {
+            overflow: hidden !important;
+            height: 100% !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container-xxl bg-white p-0">
+        <!-- Spinner Start -->
+        <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+            <div class="spinner-grow text-primary" style="width: 3rem; height: 3rem;" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+        <!-- Spinner End -->
+
+
+        <!-- Navbar & Hero Start -->
+        <div class="container-xxl position-relative p-0" id="navbarHidden">
+            <nav class="navbar navbar-expand-lg navbar-light px-4 px-lg-5 py-3 py-lg-0">
+                <a href="/" class="navbar-brand p-0">
+                    <h1 class="m-0"><img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo"></i>Lupa<span class="fs-5">Digital</span></h1>
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                    <span class="fa fa-bars"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarCollapse">
+                    <div class="navbar-nav ms-auto py-0">
+                        <a href="/" class="nav-item nav-link">Início</a>
+                        <a href="/sobre" class="nav-item nav-link">Sobre</a>
+                        <a href="/grafo" class="nav-item nav-link active">Grafo</a>
+                    </div>
+                    <div class="d-none d-lg-flex">
+                        <button type="button" class="btn text-secondary ms-3" onclick="window.location.href='/'">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        {% if globalVar['query'] %}
+                        <a href="javascript:void(0);" style="pointer-events: none; cursor: default; box-shadow: inset 0 0 0 2px rgb(82, 118, 237); color: rgb(82, 118, 237);" class="nav-item nav-link btn rounded-pill py-2 px-4 ms-3">{{ globalVar['query'] }}</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </nav>
+            <!-- Navbar End -->
+        </div>
+        <!-- Hero End -->
+
+        <!-- Start Grafo -->
+        <div class="container-xxl bg-primary hero-header-graph">
+            <div class="px-lg-5">
+                <div class="row justify-content-center" style="--bs-gutter-x: -1.5rem;">
+                    <div style="position: relative; width: 100%; margin: 0; padding: 0;" class="wow zoomIn" data-wow-delay="0.1s">
+                        <iframe id="myGraph" 
+                                srcdoc="{{ globalVar['graph_html'][1] }}"
+                                style="display: block; border:10px solid rgba(21, 49, 127, 0.8); width: 100%;">
+                            Este browser não suporta iframes. Por favor, atualize o seu navegador ou utilize um diferente.
+                        </iframe>
+                        <div style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 1000;">
+                            <button type="button" 
+                                    class="btn button-graph"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#tutorialModal"
+                                    style="padding: 0; font-size: 1em; outline: none; box-shadow: none;">
+                                <i class="fa fa-question-circle"></i>
+                                <span class="help-text">Detalhes do Grafo</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                function adjustIframeSize() {
+                    let screenWidth = window.innerWidth;
+                    let screenHeight = window.innerHeight;
+
+                    let navbar1 = document.getElementById("navbarCollapse");
+                    let navbar2 = document.getElementById("navbarHidden");
+                    let footer = document.getElementById("footer-banner");
+
+                    let navbarHeight1 = navbar1 ? navbar1.offsetHeight : 0;
+                    let navbarHeight2 = navbar2 ? navbar2.offsetHeight : 0;
+                    let navbarHeight = Math.max(navbarHeight1, navbarHeight2);
+                    let footerHeight = footer ? footer.offsetHeight : 0;
+
+                    let availableHeight = screenHeight - navbarHeight - footerHeight;
+
+                    let iframe = document.getElementById("myGraph");
+                    if (iframe) {
+                        iframe.style.height = availableHeight + "px";
+
+                        if (navbarHeight1 > navbarHeight2) {
+                            iframe.style.marginTop = "6em";
+                        } else {
+                            iframe.style.marginTop = "0";
+                        }
+                    }
+                }
+
+                window.addEventListener("load", adjustIframeSize);
+                window.addEventListener("resize", adjustIframeSize);
+            </script>
+        </div>
+        <!-- End Grafo -->
+        
+        
+
+        <!-- Start Help Grafo -->  
+        <div class="modal fade" id="tutorialModal" tabindex="-1" aria-labelledby="tutorialModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Sobre o Grafo</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+
+                        <!-- 1.0: Explicação do grafo -->
+                        <div class="mb-4">
+                            <!--<h5>O Grafo</h5>-->
+                            <p style="text-align: justify;">A partir deste grafo interativo, pode explorar as relações mais notáveis com <u>{{ globalVar['query'] }}</u>. Este grafo tem a capacidade de comprimir uma grande quantidade de informação sobre cada relação, tornando-o uma ferramenta poderosa para entender as dinâmicas entre <u>{{ globalVar['query'] }}</u> e os vários tópicos. Leia as seguintes instruções para ter a melhor experiência possível.</p>
+                            <div class="border-top border-light my-4"></div>
+                        </div>
+
+                        <!-- Seção 2.1: Explicação do Tamanho dos Nós -->
+                        <div class="mb-4">
+                            <h5>Tamanho dos Nós</h5>
+                            <img src="{{ url_for('static', filename='img/grafo_mencoes.png') }}" class="d-block w-100" alt="node size">
+                            <p style="text-align: justify;">O tamanho de cada nó reflete a frequência com que o tópico se relaciona com o tópico principal (<u>{{ globalVar['query'] }}</u>).</p>
+                        </div>
+
+                        <!-- 2.2: Explicação das cores -->
+                        <div class="mb-4">
+                            <h5>Cores dos Nós</h5>
+                            <img src="{{ url_for('static', filename='img/grafo_sentimento.png') }}" class="d-block w-100" alt="cores">
+                            <p style="text-align: justify;">Cada nó tem uma cor que representa a perceção do sentimento da relação em causa. A palete de cores utilizada é dada por:
+                                <a style="color: rgb(204, 0, 0);">muito negativo</a>,
+                                <a style="color: rgb(239, 83, 80);">negativo</a>,
+                                <a style="color: rgb(204, 204, 204);">neutro</a>,
+                                <a style="color: rgb(102, 187, 106);">positivo</a> ou
+                                <a style="color: rgb(0, 200, 81);">muito positivo</a>.
+                            </p>
+                        </div>
+
+                        <!-- 2.3: Hover -->
+                        <div class="mb-4">
+                            <h5>Hover</h5>
+                            <img src="{{ url_for('static', filename='img/grafo_hover.png') }}" class="d-block w-100" alt="Hover">
+                            <p style="text-align: justify;">Ao passar o rato por cima de um nó, irá observar o nome do tópico, a quantidade de menções do mesmo em contexto do tópico principal e a data da mais recente.</p>
+                            <div class="border-top border-light my-4"></div>
+                        </div>
+
+                        <!-- 3.0: Clicar nos tópicos -->
+                        <div class="mb-4">
+                            <h5>Detalhes da Relação</h5>
+                            <p style="text-align: justify;">De modo a descobrir mais sobre uma relação específica, clique no nó do tópico do seu interesse e poderá ver mais detalhes sobre essa relação. Esses detalhes incluem:</p>
+                        </div>
+
+                        <!-- 3.1: Mentions -->
+                        <div class="mb-4">
+                            <img src="{{ url_for('static', filename='img/grafo_imencoes.png') }}" class="d-block w-100" alt="Mentions">
+                            <p style="text-align: justify;">Número de menções do tópico em notícias sobre <u>{{ globalVar['query'] }}</u>.</p>
+                        </div>
+
+                        <!-- 3.2: Sentiment -->
+                        <div class="mb-4">
+                            <img src="{{ url_for('static', filename='img/grafo_isentimento.png') }}" class="d-block w-100" alt="Sentimento">
+                            <p style="text-align: justify;">Perceção do sentimento da relação entre o tópico e <u>{{ globalVar['query'] }}</u>.</p>
+                        </div>
+
+                        <!-- 3.3: Sources -->
+                        <div class="mb-4">
+                            <img src="{{ url_for('static', filename='img/grafo_ifontes.png') }}" class="d-block w-100" alt="Fontes">
+                            <p style="text-align: justify;"> Distribuição da quantidade de menções do tópico em noticias sobre <u>{{ globalVar['query'] }}</u> por fonte de informação.
+                        </div>
+
+                        <!-- 3.4: News -->
+                        <div class="mb-4">
+                            <img src="{{ url_for('static', filename='img/grafo_iurls.png') }}" class="d-block w-100" alt="Noticias">
+                            <p style="text-align: justify;">Lista de notícias onde a relação em causa está presente, ordenadas cronologicamente.</p>
+                        </div>
+
+                        <!-- 3.5: Time Series -->
+                        <div class="mb-4">
+                            <img src="{{ url_for('static', filename='img/grafo_ievolucao.png') }}" class="d-block w-100" alt="Time Series">
+                            <p style="text-align: justify;">Evolução ao longo do tempo das menções do tópico em notícias sobre <u>{{ globalVar['query'] }}</u>.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- End Help Grafo -->
+
+        <!-- Footer Start -->
+        <div class="container-fluid bg-primary text-light smallfooter" id="footer-banner">
+            <div class="container px-lg-5">
+                <div class="copyright">
+                    <div class="row">
+                        <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                            &copy; <a class="border-bottom" href="#">Lupa Digital</a>. Todos os direitos reservados.
+                        </div>
+                        <div class="col-md-6 text-center text-md-end">
+                            <div class="footer-menu">
+                                <a href="/">Início</a>
+                                <a href="/sobre">Sobre</a>
+                                <a href="#">Grafo</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer End -->
+
+        <!-- Back to Top -->
+        <!--<a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top pt-2"><i class="bi bi-arrow-up"></i></a>-->
+    </div>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='lib/wow/wow.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='lib/easing/easing.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='lib/waypoints/waypoints.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='lib/owlcarousel/owl.carousel.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='lib/isotope/isotope.pkgd.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='lib/lightbox/js/lightbox.min.js') }}"></script>
+
+    <!-- Template Javascript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+</body>
+
+</html>
