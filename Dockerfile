@@ -9,6 +9,7 @@ RUN apt-get update && \
 
 # Set JAVA_HOME for PySpark
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV PATH=$JAVA_HOME/bin:$PATH
 
 # Set working directory
 WORKDIR /app
