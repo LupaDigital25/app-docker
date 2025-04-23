@@ -10,6 +10,7 @@ from pyspark.sql.types import *
 import os
 import re
 import unicodedata
+import atexit
 
 # Local
 from graph import create_keyword_graph
@@ -31,18 +32,22 @@ spark_mem = os.getenv("SPARK_MEM", "8g")
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
-if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+# start the spark session
+spark = SparkSession.builder \
+    .appName("LupaDigital") \
+    .master(f"local[{spark_cores}]") \
+    .config("spark.ui.enabled", "false") \
+    .config("spark.driver.memory", f"{spark_mem}") \
+    .config("spark.executor.memory", f"{spark_mem}") \
+    .getOrCreate()
 
-    spark = SparkSession.builder \
-        .appName("LupaDigital") \
-        .master(f"local[{spark_cores}]") \
-        .config("spark.ui.enabled", "false") \
-        .config("spark.driver.memory", f"{spark_mem}") \
-        .config("spark.executor.memory", f"{spark_mem}") \
-        .getOrCreate()
-    
-    df = spark.read.parquet("../data/news_processed")
+# gracefully stop the spark session on exit
+atexit.register(lambda: spark.stop())
 
+# read the data
+df = spark.read.parquet("../data/news_processed")
+
+# set some default variables
 globalVar = {
             "search_done": False,
             "zero_results": True,
