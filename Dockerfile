@@ -33,5 +33,8 @@ COPY . .
 # Expose Flask port
 EXPOSE 5000
 
-# Launch your app directly
-CMD ["sh", "-c", "cd app && python app.py"]
+# Set working dir to /lupadigital/app to run the app from there
+WORKDIR /lupadigital/app
+
+# Run the app with Gunicorn (2 workers)
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "app:app"]

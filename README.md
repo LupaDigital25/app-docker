@@ -8,6 +8,12 @@ docker pull hugoverissimo21/lupa-digital-25:latest
 
 #### run:
 
+```bash
+docker ps
+docker stop ca1b76df4df4
+docker rm ca1b76df4df4
+```
+
 - local
 ```bash
 docker run -p 6969:5000 hugoverissimo21/lupa-digital-25:latest
