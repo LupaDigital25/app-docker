@@ -24,16 +24,21 @@ def standardize_keyword(texto):
     texto = re.sub(r'\s+', ' ', texto)
     return texto.strip()
 
+# Environment variables
+spark_cores = os.getenv("SPARK_CORES", "*")
+spark_mem = os.getenv("SPARK_MEM", "8g")
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
 
     spark = SparkSession.builder \
-        .appName("News App") \
+        .appName("LupaDigital") \
+        .master(f"local[{spark_cores}]") \
         .config("spark.ui.enabled", "false") \
-        .config("spark.driver.memory", "4g") \
-        .config("spark.executor.memory", "4g") \
+        .config("spark.driver.memory", f"{spark_mem}") \
+        .config("spark.executor.memory", f"{spark_mem}") \
         .getOrCreate()
     
     df = spark.read.parquet("../data/news_processed")
@@ -231,4 +236,4 @@ def relacao():
 
 if __name__ == '__main__':
     #app.run(debug=True)
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)
