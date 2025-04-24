@@ -580,7 +580,7 @@
     <!-- Loading the Graph Page Script-->
     <script>
         function openGraph() {
-            {% if session['query'] != session['graph_html'][0] and not session['zero_results'] %}
+            {% if session['query'] != graph_html_0 and not session['zero_results'] %}
             
             // Show the loading indicator
             document.getElementById("loadingIndicatorGraph").style.display = "flex";

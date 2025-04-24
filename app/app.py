@@ -111,7 +111,8 @@ def setup_user():
 
 @app.route('/')
 def home():    
-    return render_template('index.html', session=session)
+    return render_template('index.html', session=session,
+                           graph_html_0 = load_from_pickle(cached_sessions[session["session_id"]]["graph_html"][0]),
 
 @app.route('/sobre')
 def sobre():
@@ -195,7 +196,7 @@ def pesquisa():
                                                                              [query, None])
         return render_template('info.html', session=session,
                                wordcloud = load_from_pickle(cached_sessions[session["session_id"]]["wordcloud"]),
-                               graph_html = load_from_pickle(cached_sessions[session["session_id"]]["graph_html"]))
+                               graph_html_0 = load_from_pickle(cached_sessions[session["session_id"]]["graph_html"][0])
     
     # process the query results
     # create key value pairs for each seen keyword
