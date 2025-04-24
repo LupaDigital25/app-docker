@@ -178,7 +178,7 @@
                 <div class="container my-5 py-5 px-lg-5">
                     <div class="row g-5 py-5">
                         <div class="col-12 text-center">
-                            <img class="animated zoomIn" src="data:image/png;base64,{{ session['wordcloud'] }}" alt="Topic WordCloud" style="max-width: 100%; height: auto; display: block; margin: 0 auto; margin-top: -6em;">
+                            <img class="animated zoomIn" src="data:image/png;base64,{{ wordcloud }}" alt="Topic WordCloud" style="max-width: 100%; height: auto; display: block; margin: 0 auto; margin-top: -6em;">
                             <hr class="bg-white mx-auto mt-0" style="width: 90px;">
                             <nav aria-label="breadcrumb">
                                 <ol class="breadcrumb justify-content-center">
@@ -297,11 +297,11 @@
                         <p class="mb-3" style="text-align: justify;">Passe com o rato sobre os gráficos para descobrir mais informações.</p>
                     </div>
                     <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.1s">
-                        {{ session['pie_sources'] | safe }}
+                        {{ pie_sources | safe }}
                     </div>
                 </div>
                 <div class="row g-5 wow zoomIn" data-wow-delay="0.1s">
-                    {{ session['ts_news'] | safe }}
+                    {{ ts_news | safe }}
                 </div>
             </div>
         </div>
@@ -371,9 +371,9 @@
                                     <h6 class="mb-4 text-center"><i class="fa fa-times text-primary me-2"></i>Erro ortográfico</h6>
                                 </div>
                             </div>
-                            <p class="mb-0" style="text-align: justify;">Pode agora optar por verificar outra ligação entre tópicos à sua escolha, ou uma aleatória, por exemplo {{ session['recomendations_topicrelation'] | safe }}.</p>
+                            <p class="mb-0" style="text-align: justify;">Pode agora optar por verificar outra ligação entre tópicos à sua escolha, ou uma aleatória, por exemplo {{ recomendations_topicrelation | safe }}.</p>
                         {% else %}
-                            <p class="mb-4" style="text-align: justify;">Nas {{ session['query_amountofnews'] }} notícias sobre <u>{{ session['query'] }}</u>, foram encontradas {{ session['count_topicrelation'] }} menções em relação a <u>{{ session['related_topic'] }}</u>.<br>Utilizando as ferramentas da Lupa Digital disponíveis poderá agora verificar quanto à relação:</p>
+                            <p class="mb-4" style="text-align: justify;">Nas {{ session['query_amountofnews'] }} notícias sobre <u>{{ session['query'] }}</u>, foram encontradas {{ count_topicrelation }} menções em relação a <u>{{ session['related_topic'] }}</u>.<br>Utilizando as ferramentas da Lupa Digital disponíveis poderá agora verificar quanto à relação:</p>
                             <div class="row g-3">
                                 <div class="col-sm-3"><h6 class="mb-5 text-center"><i class="fa fa-check text-primary me-2"></i>Fontes de Informação</h6></div>
                                 <div class="col-sm-3"><h6 class="mb-5 text-center"><i class="fa fa-check text-primary me-2"></i>Perceção do Sentimento</h6></div>
@@ -389,7 +389,7 @@
             <div class="container px-lg-5 wow fadeInUp" data-wow-delay="0.1s">
                 <div class="row g-4">
                     <div id="relation-leftcol" class="col-12 col-md-3" style="position: relative; overflow-y: auto;">
-                        <iframe srcdoc='{{ session["sources_topicrelation"] }}'
+                        <iframe srcdoc='{{ sources_topicrelation }}'
                                 scrolling="no"
                                 style="height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; position: absolute; top: -10%; left: 0%; z-index: 1;">
                         </iframe>
@@ -406,7 +406,7 @@
                         </div>
                     </div>
                     <div id="relation-rightcol" class="col-12 col-md-9 align-content-center" style="padding-right: 1em;">
-                        {{ session['ts_topicrelation'] | safe }}
+                        {{ ts_topicrelation | safe }}
                     </div>                   
                 </div>
             </div>
@@ -415,7 +415,7 @@
                     let percentage = ((sentiment + 1) / 2) * 100;
                     document.getElementById("arrow").style.left = percentage + "%";
                 }
-                updateSentiment({{ session['sentiment_topicrelation'] }});
+                updateSentiment({{ sentiment_topicrelation }});
             </script>
             <script>
                 function matchColumnHeights() {
@@ -443,7 +443,7 @@
             <small class="text-white d-block text-center" style="text-align: center; padding-top: 1em;">Encontre aqui algumas notícias arquivadas pelo <a href="https://arquivo.pt" target="_blank" style="text-decoration: none; color: inherit;">Arquivo.pt</a> que contêm a relação <u>{{ session['query'] }}</u> & <u>{{ session['related_topic'] }}</u>.</small>
             <div class="container px-lg-5" style="padding-bottom:3.5rem; padding-top: 2em;">
                 <div class="owl-carousel testimonial-carousel">
-                    {{ session['news_topicrelation'] | safe }}
+                    {{ news_topicrelation | safe }}
                 </div>
             </div>
         </div>

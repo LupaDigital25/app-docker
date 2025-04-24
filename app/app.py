@@ -14,6 +14,7 @@ import atexit
 import uuid
 import shutil
 from cachetools import TTLCache
+import pickle
 
 # Local
 from graph import create_keyword_graph
@@ -27,6 +28,19 @@ def standardize_keyword(texto):
     texto = re.sub(r'[^a-z0-9\s]', ' ', texto)
     texto = re.sub(r'\s+', ' ', texto)
     return texto.strip()
+
+def save_to_pickle(session_id, filename, data):
+    file_path = os.path.join(f"/tmp/lupa_result_{session_id}", f"{filename}.pickle")
+    with open(file_path, "wb") as f:
+        pickle.dump(data, f)
+    return file_path
+
+def load_from_pickle(file_path):
+    if os.path.exists(file_path):
+        with open(file_path, "rb") as f:
+            return pickle.load(f)
+    return None
+
 
 # Environment variables
 spark_cores = os.getenv("SPARK_CORES", "*")
@@ -50,8 +64,8 @@ atexit.register(lambda: spark.stop())
 # read the data
 df = spark.read.parquet("../data/news_processed")
 
-# results for query searches by session_id (cache)
-results = TTLCache(maxsize=50, ttl=300)
+# sessions cached results
+cached_sessions = TTLCache(maxsize=50, ttl=300)
 def cleanup_untracked_pickles(cache):
     """Delete all pickle folders not currently in cache."""
     try:
@@ -74,8 +88,14 @@ app.secret_key = "abracadabra2"
 
 @app.before_request
 def setup_user():
+    global cached_sessions
+
     if "session_id" not in session:
         session["session_id"] = str(uuid.uuid4())
+
+        # create a new session
+        output_dir = f"/tmp/lupa_result_{session["session_id"]}"
+        os.makedirs(output_dir, exist_ok=True)
     
         # set some default variables
         session["search_done"] = False
@@ -84,48 +104,65 @@ def setup_user():
         session["total_amount_of_news"] = 349519 #df.count()
         session["first_news"] = 1998 #df.select("timestamp").orderBy("timestamp").first()[0]
         session["last_news"] = 2024 #df.select("timestamp").orderBy(df.timestamp.desc()).first()[0]
-        session["graph_html"] = [None, None]
+        cached_sessions[session["session_id"]]["graph_html"] = save_to_pickle(session["session_id"],
+                                                                             "graph_html",
+                                                                             [None, None])
 
 @app.route('/')
-def home():
+def home():    
     return render_template('index.html', session=session)
 
 @app.route('/sobre')
 def sobre():
+    global cached_sessions
+
     if not session.get("search_done", False):
         return render_template("404.html", session=session)
     
-    return render_template("info.html", session=session)
-
+    return render_template("info.html", session=session,
+                           wordcloud = load_from_pickle(cached_sessions[session["session_id"]]["wordcloud"]),
+                           pie_sources = load_from_pickle(cached_sessions[session["session_id"]]["pie_sources"]),
+                           ts_news = load_from_pickle(cached_sessions[session["session_id"]]["ts_news"]),
+                           count_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["count_topicrelation"]),
+                           sentiment_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["sentiment_topicrelation"]),
+                           sources_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["sources_topicrelation"]),
+                           ts_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["ts_topicrelation"]),
+                           news_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["news_topicrelation"]),
+                           recomendations_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["recomendations_topicrelation"]))
 
 @app.route('/grafo')
 def grafo():
-    global results
+    global cached_sessions
 
     if not session.get("search_done", False) or session.get("zero_results", True):
         return render_template('404.html', session=session)
     
+    graph_html = load_from_pickle(cached_sessions[session["session_id"]]["graph_html"])
+    
     # if graph was already computed, ok
-    if session["graph_html"][0] == session["query"]:
-        return render_template('graph.html', session=session)
+    if graph_html[0] == session["query"]:
+        return render_template('graph.html', session=session,
+                               graph_html=graph_html[1])
     
     # if graph has yet to be computed, do it
-    if session["graph_html"][0] != session["query"]:
-        result_path = results[session["session_id"]]
+    if graph_html[0] != session["query"]:
+        result_path = cached_sessions[session["session_id"]]["result"]
         result = spark.sparkContext.pickleFile(result_path)
         top_n = (
             result.sortBy(lambda x: x[1][0], ascending=False)
                 .take(125)
         )
         min_count = min(x[1][0] for x in top_n)
-        session["graph_html"] = [session["query"],
-                                   create_keyword_graph(dict(top_n), session["query"], min_count)]
-        return render_template('graph.html', session=session)
+        graph_html = [session["query"], create_keyword_graph(dict(top_n), session["query"], min_count)]
+        cached_sessions[session["session_id"]]["graph_html"] = save_to_pickle(session["session_id"],
+                                                                              "graph_html", graph_html)
+        return render_template('graph.html', session=session,
+                               graph_html=graph_html[1])    
 
 
 @app.route('/pesquisa', methods=['GET'])
 def pesquisa():
-    global results
+    global cached_sessions
 
     # update
     session["search_done"] = True
@@ -133,13 +170,7 @@ def pesquisa():
     session["topicrelation"] = False
 
     # free up memory
-    cleanup_untracked_pickles(results)
-    session["graph_html"] = [None, None]
-    session["count_topicrelation"] = None
-    session["sentiment_topicrelation"] = None
-    session["sources_topicrelation"] = None
-    session["ts_topicrelation"] = None
-    session["news_topicrelation"] = None
+    cleanup_untracked_pickles(cached_sessions)
 
     # query requested
     query = request.args.get('topico', '')
@@ -154,9 +185,16 @@ def pesquisa():
     # if there are no results show there is nothing
     if session['query_amountofnews'] == 0:
         session["zero_results"] = True
-        session["wordcloud"] = topic_wordcloud({}, query, "static/Roboto-Black.ttf")
-        session["graph_html"] = [query, None]
-        return render_template('info.html', session=session)
+
+        cached_sessions[session["session_id"]]["wordcloud"] = save_to_pickle(session["session_id"],
+                                                                             "wordcloud",
+                                                                             topic_wordcloud({}, query, "static/Roboto-Black.ttf"))
+        cached_sessions[session["session_id"]]["graph_html"] = save_to_pickle(session["session_id"],
+                                                                             "graph_html",
+                                                                             [query, None])
+        return render_template('info.html', session=session,
+                               wordcloud = load_from_pickle(cached_sessions[session["session_id"]]["wordcloud"]),
+                               graph_html = load_from_pickle(cached_sessions[session["session_id"]]["graph_html"]))
     
     # process the query results
     # create key value pairs for each seen keyword
@@ -193,27 +231,39 @@ def pesquisa():
     word_counts = word_counts = dict(
         result.map(lambda x: (x[0], x[1][0])).take(5000)
     )
-    result_path = f"/tmp/lupa_result_{session['session_id']}"
+    result_path = f"/tmp/lupa_result_{session['session_id']}/result"
     result.saveAsPickleFile(result_path)
-    results[session["session_id"]] = result_path
+    cached_sessions[session["session_id"]]["result"] = result_path
     del result
-    session["wordcloud"] = topic_wordcloud(word_counts, query, "static/Roboto-Black.ttf")
+    cached_sessions[session["session_id"]]["wordcloud"] = save_to_pickle(session["session_id"],
+                                                                             "wordcloud",
+                                                                             topic_wordcloud(word_counts, query, "static/Roboto-Black.ttf"))
     del word_counts
     # info: sources pie
-    session["pie_sources"] = pie_newsSources(df_with_query.groupBy('source').count().toPandas()) 
+    cached_sessions[session["session_id"]]["pie_sources"] = save_to_pickle(session["session_id"],
+                                                                             "pie_sources",
+                                                                             pie_newsSources(df_with_query.groupBy('source').count().toPandas()))
     # info: time series
-    session["news_by_month"] = (
+    news_by_month = (
         df_with_query
         .groupBy('timestamp')
         .agg(F.count('archive').alias('count_of_news'))
         .toPandas()
     )
-    session["ts_news"], session["query_firstnews"] = timeseries_news(df_with_query, session["news_by_month"], query)
+    cached_sessions[session["session_id"]]["news_by_month"] = save_to_pickle(session["session_id"],
+                                                                             "news_by_month", news_by_month)
+    ts_news, session["query_firstnews"] = timeseries_news(df_with_query, news_by_month, query)
+    cached_sessions[session["session_id"]]["ts_news"] = save_to_pickle(session["session_id"],
+                                                                             "ts_news", ts_news) 
     # info: topic relation deactivated
     session["topicrelation"] = False
 
     # render the info template
-    return render_template('info.html', session=session)
+    return render_template('info.html', session=session,
+                           wordcloud = load_from_pickle(cached_sessions[session["session_id"]]["wordcloud"]),
+                           pie_sources = load_from_pickle(cached_sessions[session["session_id"]]["pie_sources"]),
+                           ts_news = load_from_pickle(cached_sessions[session["session_id"]]["ts_news"]))
+
 
 
 @app.route('/relacao', methods=['GET'])
@@ -229,7 +279,7 @@ def relacao():
     standardize_related_topic = standardize_keyword(related_topic)
 
     # get the topic relation
-    result_path = results[session["session_id"]]
+    result_path = cached_sessions[session["session_id"]]["result"]
     result = spark.sparkContext.pickleFile(result_path)
     try:
         filtered = dict(result.filter(lambda x: standardize_keyword(x[0]) == standardize_related_topic).collect())
@@ -238,20 +288,30 @@ def relacao():
     except:
         session["topicrelation_exists"] = False
 
-
     # either return results
     if session["topicrelation_exists"]:
         del result
         # relation count
-        session["count_topicrelation"] = filtered[0]
+        cached_sessions[session["session_id"]]["count_topicrelation"] = save_to_pickle(session["session_id"],
+                                                                                     "count_topicrelation", filtered[0])
         # relation sentiment
-        session["sentiment_topicrelation"] = filtered[2]
+        cached_sessions[session["session_id"]]["sentiment_topicrelation"] = save_to_pickle(session["session_id"],
+                                                                                           "sentiment_topicrelation", filtered[2])
         # relation sources
-        session["sources_topicrelation"] = sources_topicrelation(filtered[3])
+        cached_sessions[session["session_id"]]["sources_topicrelation"] = save_to_pickle(session["session_id"],
+                                                                                         "sources_topicrelation",
+                                                                                         sources_topicrelation(filtered[3]))
         # relation time series
-        session["ts_topicrelation"] = ts_topicrelation(session["news_by_month"], filtered[1], related_topic, session['query'])
+        ts_topicrelation = ts_topicrelation(load_from_pickle(cached_sessions[session["session_id"]]["news_by_month"]),
+                                                       filtered[1],
+                                                       related_topic,
+                                                       session['query'])
+        cached_sessions[session["session_id"]]["ts_topicrelation"] = save_to_pickle(session["session_id"],
+                                                                                     "ts_topicrelation", ts_topicrelation)
         # relation news
-        session["news_topicrelation"] = news_topicrelation(filtered[4])
+        cached_sessions[session["session_id"]]["news_topicrelation"] = save_to_pickle(session["session_id"],
+                                                                                      "news_topicrelation",
+                                                                                      news_topicrelation(filtered[4]))
         
     # or return a random selection of topics
     else:
@@ -263,12 +323,23 @@ def relacao():
         recomendation_output = ""
         for x in filtered_sample:
             recomendation_output += f"<a href='/relacao?entre={x[0]}'>{x[0]}</a>, "
-        session["recomendations_topicrelation"] = recomendation_output[:-2]
+        cached_sessions[session["session_id"]]["recomendations_topicrelation"] = save_to_pickle(session["session_id"],
+                                                                                                "recomendations_topicrelation",
+                                                                                                recomendation_output[:-2])
 
     session["topicrelation"] = True
-    return render_template('info.html', session=session, scroll_to_relation=True)
-    
+    return render_template('info.html', session=session, scroll_to_relation=True,
+                           wordcloud = load_from_pickle(cached_sessions[session["session_id"]]["wordcloud"]),
+                           pie_sources = load_from_pickle(cached_sessions[session["session_id"]]["pie_sources"]),
+                           ts_news = load_from_pickle(cached_sessions[session["session_id"]]["ts_news"]),
+                           count_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["count_topicrelation"]),
+                           sentiment_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["sentiment_topicrelation"]),
+                           sources_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["sources_topicrelation"]),
+                           ts_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["ts_topicrelation"]),
+                           news_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["news_topicrelation"]),
+                           recomendations_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["recomendations_topicrelation"]))
+
 
 if __name__ == '__main__' and True == True:
     #app.run(debug=True)
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=True) # PUT TO FALSE LATER ON
