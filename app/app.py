@@ -12,6 +12,7 @@ import re
 import unicodedata
 import atexit
 import uuid
+import shutil
 from cachetools import TTLCache
 
 # Local
@@ -49,8 +50,15 @@ atexit.register(lambda: spark.stop())
 # read the data
 df = spark.read.parquet("../data/news_processed")
 
-# results for query searches by session_id
-results = TTLCache(maxsize=50, ttl=300)
+# results for query searches by session_id (cache)
+def delete_result_file(session_id, path):
+    try:
+        if os.path.exists(path):
+            shutil.rmtree(path)
+            print(f"Deleted cached result for {session_id}: {path}")
+    except Exception as e:
+        print(f"Failed to delete {path}: {e}")
+results = TTLCache(maxsize=50, ttl=300, callback=delete_result_file)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -97,8 +105,10 @@ def grafo():
     
     # if graph has yet to be computed, do it
     if session["graph_html"][0] != session["query"]:
+        result_path = results[session["session_id"]]
+        result = spark.sparkContext.pickleFile(result_path)
         top_n = (
-            results[session["session_id"]].sortBy(lambda x: x[1][0], ascending=False)
+            result.sortBy(lambda x: x[1][0], ascending=False)
                 .take(125)
         )
         min_count = min(x[1][0] for x in top_n)
@@ -170,14 +180,16 @@ def pesquisa():
         x[3],
         x[4]
     ))
-    results[session["session_id"]] = result
-    del result
 
     # get insights and visualizations
     # info: wordcloud
     word_counts = word_counts = dict(
-        results[session["session_id"]].map(lambda x: (x[0], x[1][0])).take(5000)
+        result.map(lambda x: (x[0], x[1][0])).take(5000)
     )
+    result_path = f"/tmp/lupa_result_{session['session_id']}"
+    result.saveAsPickleFile(result_path)
+    results[session["session_id"]] = result_path
+    del result
     session["wordcloud"] = topic_wordcloud(word_counts, query, "static/Roboto-Black.ttf")
     del word_counts
     # info: sources pie
@@ -210,8 +222,10 @@ def relacao():
     standardize_related_topic = standardize_keyword(related_topic)
 
     # get the topic relation
+    result_path = results[session["session_id"]]
+    result = spark.sparkContext.pickleFile(result_path)
     try:
-        filtered = dict(results[session["session_id"]].filter(lambda x: standardize_keyword(x[0]) == standardize_related_topic).collect())
+        filtered = dict(result.filter(lambda x: standardize_keyword(x[0]) == standardize_related_topic).collect())
         filtered =  next(iter(filtered.values()))
         session["topicrelation_exists"] = True
     except:
@@ -220,6 +234,7 @@ def relacao():
 
     # either return results
     if session["topicrelation_exists"]:
+        del result
         # relation count
         session["count_topicrelation"] = filtered[0]
         # relation sentiment
@@ -234,9 +249,10 @@ def relacao():
     # or return a random selection of topics
     else:
         filtered_sample = (
-            results[session["session_id"]].filter(lambda x: x[1][0] >= 3)
+            result.filter(lambda x: x[1][0] >= 3)
                 .takeSample(False, 5)
         )
+        del result
         recomendation_output = ""
         for x in filtered_sample:
             recomendation_output += f"<a href='/relacao?entre={x[0]}'>{x[0]}</a>, "
