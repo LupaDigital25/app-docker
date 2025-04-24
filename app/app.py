@@ -94,7 +94,7 @@ def setup_user():
         session["session_id"] = str(uuid.uuid4())
 
         # create a new session
-        output_dir = f"/tmp/lupa_result_{session["session_id"]}"
+        output_dir = f"/tmp/lupa_result_{session['session_id']}"
         os.makedirs(output_dir, exist_ok=True)
     
         # set some default variables
