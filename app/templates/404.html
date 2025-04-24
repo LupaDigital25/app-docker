@@ -71,8 +71,8 @@
                         <button type="button" class="btn text-secondary ms-3" onclick="window.location.href='/'">
                             <i class="fa fa-search"></i>
                         </button>
-                        {% if globalVar['query'] %}
-                        <a href="javascript:void(0);" style="pointer-events: none; cursor: default; box-shadow: inset 0 0 0 2px rgb(82, 118, 237); color: rgb(82, 118, 237);" class="nav-item nav-link btn rounded-pill py-2 px-4 ms-3">{{ globalVar['query'] }}</a>
+                        {% if session['query'] %}
+                        <a href="javascript:void(0);" style="pointer-events: none; cursor: default; box-shadow: inset 0 0 0 2px rgb(82, 118, 237); color: rgb(82, 118, 237);" class="nav-item nav-link btn rounded-pill py-2 px-4 ms-3">{{ session['query'] }}</a>
                         {% endif %}
                     </div>
                 </div>

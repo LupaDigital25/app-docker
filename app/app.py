@@ -1,5 +1,5 @@
 # Flask
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, session
 
 # Spark
 from pyspark.sql import SparkSession
@@ -11,6 +11,8 @@ import os
 import re
 import unicodedata
 import atexit
+import uuid
+from cachetools import TTLCache
 
 # Local
 from graph import create_keyword_graph
@@ -47,92 +49,97 @@ atexit.register(lambda: spark.stop())
 # read the data
 df = spark.read.parquet("../data/news_processed")
 
-# set some default variables
-globalVar = {
-            "search_done": False,
-            "zero_results": True,
-            "topicrelation": False,
-            "total_amount_of_news": 349519, #df.count()
-            "first_news": 1998, #df.select("timestamp").orderBy("timestamp").first()[0])
-            "last_news": 2024, #df.select("timestamp").orderBy(df.timestamp.desc()).first()[0]
-            "graph_html": (None, None),
-            }
+# results for query searches by session_id
+results = TTLCache(maxsize=50, ttl=300)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 app = Flask(__name__)
+app.secret_key = "abracadabra2"
 
+@app.before_request
+def setup_user():
+    if "session_id" not in session:
+        session["session_id"] = str(uuid.uuid4())
+    
+        # set some default variables
+        session["search_done"] = False
+        session["zero_results"] = True
+        session["topicrelation"] = False
+        session["total_amount_of_news"] = 349519 #df.count()
+        session["first_news"] = 1998 #df.select("timestamp").orderBy("timestamp").first()[0]
+        session["last_news"] = 2024 #df.select("timestamp").orderBy(df.timestamp.desc()).first()[0]
+        session["graph_html"] = [None, None]
 
 @app.route('/')
 def home():
-    return render_template('index.html', globalVar=globalVar)
-
+    return render_template('index.html', session=session)
 
 @app.route('/sobre')
 def sobre():
-    global globalVar
-    if globalVar["search_done"] == False:
-        return render_template('404.html', globalVar=globalVar)
+    if not session.get("search_done", False):
+        return render_template("404.html", session=session)
     
-    return render_template('info.html', globalVar=globalVar)
+    return render_template("info.html", session=session)
 
 
 @app.route('/grafo')
 def grafo():
-    global globalVar
-    if globalVar["search_done"] == False or globalVar["zero_results"] == True:
-        return render_template('404.html', globalVar=globalVar)
+    global results
+
+    if not session.get("search_done", False) or session.get("zero_results", True):
+        return render_template('404.html', session=session)
     
     # if graph was already computed, ok
-    if globalVar["graph_html"][0] == globalVar["query"]:
-        return render_template('graph.html', globalVar=globalVar)
+    if session["graph_html"][0] == session["query"]:
+        return render_template('graph.html', session=session)
     
     # if graph has yet to be computed, do it
-    if globalVar["graph_html"][0] != globalVar["query"]:
+    if session["graph_html"][0] != session["query"]:
         top_n = (
-            globalVar["result"].sortBy(lambda x: x[1][0], ascending=False)
+            results[session["session_id"]].sortBy(lambda x: x[1][0], ascending=False)
                 .take(125)
         )
         min_count = min(x[1][0] for x in top_n)
-        globalVar["graph_html"] = (globalVar["query"],
-                                   create_keyword_graph(dict(top_n), globalVar["query"], min_count))
-        return render_template('graph.html', globalVar=globalVar)
+        session["graph_html"] = [session["query"],
+                                   create_keyword_graph(dict(top_n), session["query"], min_count)]
+        return render_template('graph.html', session=session)
 
 
 @app.route('/pesquisa', methods=['GET'])
 def pesquisa():
-    global globalVar
+    global results
 
     # update
-    globalVar["search_done"] = True
-    globalVar["zero_results"] = False
-    globalVar["topicrelation"] = False
+    session["search_done"] = True
+    session["zero_results"] = False
+    session["topicrelation"] = False
 
     # free up memory
-    globalVar["graph_html"] = (None, None)
-    globalVar["count_topicrelation"] = None
-    globalVar["sentiment_topicrelation"] = None
-    globalVar["sources_topicrelation"] = None
-    globalVar["ts_topicrelation"] = None
-    globalVar["news_topicrelation"] = None
+    session["graph_html"] = [None, None]
+    session["count_topicrelation"] = None
+    session["sentiment_topicrelation"] = None
+    session["sources_topicrelation"] = None
+    session["ts_topicrelation"] = None
+    session["news_topicrelation"] = None
 
     # query requested
     query = request.args.get('topico', '')
-    globalVar['query'] = query
+    session['query'] = query
 
     # data filtering
     df_with_query = df \
                     .filter(F.array_contains(df["significant_keywords"], standardize_keyword(query))) \
                     .drop("significant_keywords")
-    globalVar['query_amountofnews'] = df_with_query.count()
+    session['query_amountofnews'] = df_with_query.count()
 
     # if there are no results show there is nothing
-    if globalVar['query_amountofnews'] == 0:
-        globalVar["zero_results"] = True
-        globalVar["wordcloud"] = topic_wordcloud({}, query, "static/Roboto-Black.ttf")
-        globalVar["graph_html"] = (query, None)
-        return render_template('info.html', globalVar=globalVar)
+    if session['query_amountofnews'] == 0:
+        session["zero_results"] = True
+        session["wordcloud"] = topic_wordcloud({}, query, "static/Roboto-Black.ttf")
+        session["graph_html"] = [query, None]
+        return render_template('info.html', session=session)
     
     # process the query results
     # create key value pairs for each seen keyword
@@ -163,79 +170,80 @@ def pesquisa():
         x[3],
         x[4]
     ))
-    globalVar["result"] = result
+    results[session["session_id"]] = result
     del result
 
     # get insights and visualizations
     # info: wordcloud
     word_counts = word_counts = dict(
-        globalVar["result"].map(lambda x: (x[0], x[1][0])).take(5000)
+        results[session["session_id"]].map(lambda x: (x[0], x[1][0])).take(5000)
     )
-    globalVar["wordcloud"] = topic_wordcloud(word_counts, query, "static/Roboto-Black.ttf")
+    session["wordcloud"] = topic_wordcloud(word_counts, query, "static/Roboto-Black.ttf")
     del word_counts
     # info: sources pie
-    globalVar["pie_sources"] = pie_newsSources(df_with_query.groupBy('source').count().toPandas()) 
+    session["pie_sources"] = pie_newsSources(df_with_query.groupBy('source').count().toPandas()) 
     # info: time series
-    globalVar["news_by_month"] = (
+    session["news_by_month"] = (
         df_with_query
         .groupBy('timestamp')
         .agg(F.count('archive').alias('count_of_news'))
         .toPandas()
     )
-    globalVar["ts_news"], globalVar["query_firstnews"] = timeseries_news(df_with_query, globalVar["news_by_month"], query)
+    session["ts_news"], session["query_firstnews"] = timeseries_news(df_with_query, session["news_by_month"], query)
     # info: topic relation deactivated
-    globalVar["topicrelation"] = False
+    session["topicrelation"] = False
 
     # render the info template
-    return render_template('info.html', globalVar=globalVar)
+    return render_template('info.html', session=session)
 
 
 @app.route('/relacao', methods=['GET'])
 def relacao():
-    global globalVar
-    if globalVar["search_done"] == False or globalVar["zero_results"] == True:
-        return render_template('404.html', globalVar=globalVar)
+    global results
+
+    if not session.get("search_done", False) or session.get("zero_results", True):
+        return render_template('404.html', session=session)
     
     # topic relation requested
     related_topic = request.args.get('entre', '')
-    globalVar['related_topic'] = related_topic
+    session['related_topic'] = related_topic
     standardize_related_topic = standardize_keyword(related_topic)
 
     # get the topic relation
     try:
-        filtered = dict(globalVar["result"].filter(lambda x: standardize_keyword(x[0]) == standardize_related_topic).collect())
+        filtered = dict(results[session["session_id"]].filter(lambda x: standardize_keyword(x[0]) == standardize_related_topic).collect())
         filtered =  next(iter(filtered.values()))
-        globalVar["topicrelation_exists"] = True
+        session["topicrelation_exists"] = True
     except:
-        globalVar["topicrelation_exists"] = False
+        session["topicrelation_exists"] = False
 
 
     # either return results
-    if globalVar["topicrelation_exists"]:
+    if session["topicrelation_exists"]:
         # relation count
-        globalVar["count_topicrelation"] = filtered[0]
+        session["count_topicrelation"] = filtered[0]
         # relation sentiment
-        globalVar["sentiment_topicrelation"] = filtered[2]
+        session["sentiment_topicrelation"] = filtered[2]
         # relation sources
-        globalVar["sources_topicrelation"] = sources_topicrelation(filtered[3])
+        session["sources_topicrelation"] = sources_topicrelation(filtered[3])
         # relation time series
-        globalVar["ts_topicrelation"] = ts_topicrelation(globalVar["news_by_month"], filtered[1], related_topic, globalVar['query'])
+        session["ts_topicrelation"] = ts_topicrelation(session["news_by_month"], filtered[1], related_topic, session['query'])
         # relation news
-        globalVar["news_topicrelation"] = news_topicrelation(filtered[4])
+        session["news_topicrelation"] = news_topicrelation(filtered[4])
         
     # or return a random selection of topics
     else:
         filtered_sample = (
-            globalVar["result"].filter(lambda x: x[1][0] >= 3)
+            results[session["session_id"]].filter(lambda x: x[1][0] >= 3)
                 .takeSample(False, 5)
         )
         recomendation_output = ""
         for x in filtered_sample:
             recomendation_output += f"<a href='/relacao?entre={x[0]}'>{x[0]}</a>, "
-        globalVar["recomendations_topicrelation"] = recomendation_output[:-2]
+        session["recomendations_topicrelation"] = recomendation_output[:-2]
 
-    globalVar["topicrelation"] = True
-    return render_template('info.html', globalVar=globalVar, scroll_to_relation=True)
+    session["topicrelation"] = True
+    return render_template('info.html', session=session, scroll_to_relation=True)
     
 
 if __name__ == '__main__' and True == False:

@@ -42,28 +42,26 @@ docker run -d \
 docker run -it --entrypoint bash hugoverissimo21/lupa-digital-25
 ```
 
-## deploy
+#### deploy using https (to be finished):
 
-# 1. Clone repo metadata only (no files yet)
+- remove the old deploy folder
+```bash
 rm -rf ~/app-docker
+```
+
+- clone the deply folder from the repo
+```bash
 git clone --filter=blob:none --no-checkout https://github.com/LupaDigital25/app-docker.git
 cd app-docker
-
-# 2. Enable sparse checkout
 git sparse-checkout init --cone
-
-# 3. Tell Git to only check out the deploy folder
 git sparse-checkout set deploy
-
-# shake git
 git checkout main
+```
 
-# 4. Move into the deploy folder
+- run the docker compose
+```bash
 cd deploy
-
-
-###
-
 docker-compose up -d
 docker-compose run --rm certbot
 docker restart nginx
+```

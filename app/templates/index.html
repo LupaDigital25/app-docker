@@ -72,7 +72,7 @@
                 <div class="spinner-border text-white" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <p class="mt-2 text-white">A analisar {{ globalVar['total_amount_of_news'] }} notícias...</p>
+                <p class="mt-2 text-white">A analisar {{ session['total_amount_of_news'] }} notícias...</p>
             </div>
         </div>        
         <!-- Loading Search End -->
@@ -100,10 +100,10 @@
                 <div class="collapse navbar-collapse" id="navbarCollapse">
                     <div class="navbar-nav ms-auto py-0">
                         <a href="/" class="nav-item nav-link active">Início</a>
-                        {% if not globalVar['search_done'] %}
+                        {% if not session['search_done'] %}
                             <a href="#" class="nav-item nav-link" style="cursor: not-allowed;" data-bs-toggle="tooltip" title="Comece com uma pesquisa." data-bs-placement="bottom">Sobre</a>
                             <a href="#" class="nav-item nav-link" style="cursor: not-allowed;" data-bs-toggle="tooltip" title="Comece com uma pesquisa." data-bs-placement="bottom">Grafo</a>
-                        {% elif globalVar['zero_results'] %}
+                        {% elif session['zero_results'] %}
                             <a href="/sobre" class="nav-item nav-link">Sobre</a>
                             <a href="#" class="nav-item nav-link" style="cursor: not-allowed;" data-bs-toggle="tooltip" title="Nada por aqui..." data-bs-placement="bottom">Grafo</a>
                         {% else %}
@@ -115,8 +115,8 @@
                         <button type="button" class="btn text-secondary ms-3" onclick="window.location.href='/'">
                             <i class="fa fa-search"></i>
                         </button>
-                        {% if globalVar['query'] %}
-                        <a href="javascript:void(0);" style="pointer-events: none; cursor: default; box-shadow: inset 0 0 0 2px rgb(82, 118, 237); color: rgb(82, 118, 237);" class="nav-item nav-link btn rounded-pill py-2 px-4 ms-3">{{ globalVar['query'] }}</a>
+                        {% if session['query'] %}
+                        <a href="javascript:void(0);" style="pointer-events: none; cursor: default; box-shadow: inset 0 0 0 2px rgb(82, 118, 237); color: rgb(82, 118, 237);" class="nav-item nav-link btn rounded-pill py-2 px-4 ms-3">{{ session['query'] }}</a>
                         {% endif %}
                     </div>
                 </div>
@@ -391,7 +391,7 @@
                                 <div class="mt-auto">
                                     <a class="h5 d-block text-white mt-1 mb-2">&#128270; Pesquisa Avançada</a>
                                     <p class="text-white small mb-0" style="text-align: justify;">
-                                        Pesquise por qualquer tópico, tema ou entidade, e encontre notícias relacionadas, mesmo aquelas que já não estão mais disponíveis online. A Lupa Digital permite uma análise profunda de milhares de notícias, desde {{ globalVar['first_news'] }} até {{ globalVar['last_news'] }}.
+                                        Pesquise por qualquer tópico, tema ou entidade, e encontre notícias relacionadas, mesmo aquelas que já não estão mais disponíveis online. A Lupa Digital permite uma análise profunda de milhares de notícias, desde {{ session['first_news'] }} até {{ session['last_news'] }}.
                                     </p>    
                                 </div>
                             </div>
@@ -580,7 +580,7 @@
     <!-- Loading the Graph Page Script-->
     <script>
         function openGraph() {
-            {% if globalVar['query'] != globalVar['graph_html'][0] and not globalVar['zero_results'] %}
+            {% if session['query'] != session['graph_html'][0] and not session['zero_results'] %}
             
             // Show the loading indicator
             document.getElementById("loadingIndicatorGraph").style.display = "flex";

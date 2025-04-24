@@ -79,7 +79,7 @@
                 let target = document.getElementById("topic-relation");
                 
                 // Scroll to the target section slowly with a smooth behavior
-                {% if globalVar['topicrelation_exists'] %}
+                {% if session['topicrelation_exists'] %}
                 target.scrollIntoView({ behavior: "smooth", block: "start" });
                 {% else %}
                 target.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -119,7 +119,7 @@
                 <div class="spinner-border text-white" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <p class="mt-2 text-white">A analisar {{ globalVar['total_amount_of_news'] }} notícias...</p>
+                <p class="mt-2 text-white">A analisar {{ session['total_amount_of_news'] }} notícias...</p>
             </div>
         </div>        
         <!-- Loading Search End -->
@@ -148,7 +148,7 @@
                     <div class="navbar-nav ms-auto py-0">
                         <a href="/" class="nav-item nav-link">Início</a>
                         <a href="/sobre" class="nav-item nav-link active">Sobre</a>
-                        {% if globalVar['zero_results'] %}
+                        {% if session['zero_results'] %}
                             <a href="javascript:void(0);" class="nav-item nav-link" style="cursor: not-allowed;" data-bs-toggle="tooltip" title="Nada por aqui..." data-bs-placement="bottom">Grafo</a>
                         {% else %}
                             <a href="javascript:void(0)" onclick="openGraph()" class="nav-item nav-link">Grafo</a>
@@ -158,8 +158,8 @@
                         <button type="button" class="btn text-secondary ms-3" onclick="window.location.href='/'">
                             <i class="fa fa-search"></i>
                         </button>
-                        {% if globalVar['query'] %}
-                        <a href="javascript:void(0);" style="pointer-events: none; cursor: default; box-shadow: inset 0 0 0 2px rgb(82, 118, 237); color: rgb(82, 118, 237);" class="nav-item nav-link btn rounded-pill py-2 px-4 ms-3">{{ globalVar['query'] }}</a>
+                        {% if session['query'] %}
+                        <a href="javascript:void(0);" style="pointer-events: none; cursor: default; box-shadow: inset 0 0 0 2px rgb(82, 118, 237); color: rgb(82, 118, 237);" class="nav-item nav-link btn rounded-pill py-2 px-4 ms-3">{{ session['query'] }}</a>
                         {% endif %}
                     </div>
                 </div>
@@ -178,7 +178,7 @@
                 <div class="container my-5 py-5 px-lg-5">
                     <div class="row g-5 py-5">
                         <div class="col-12 text-center">
-                            <img class="animated zoomIn" src="data:image/png;base64,{{ globalVar['wordcloud'] }}" alt="Topic WordCloud" style="max-width: 100%; height: auto; display: block; margin: 0 auto; margin-top: -6em;">
+                            <img class="animated zoomIn" src="data:image/png;base64,{{ session['wordcloud'] }}" alt="Topic WordCloud" style="max-width: 100%; height: auto; display: block; margin: 0 auto; margin-top: -6em;">
                             <hr class="bg-white mx-auto mt-0" style="width: 90px;">
                             <nav aria-label="breadcrumb">
                                 <ol class="breadcrumb justify-content-center">
@@ -192,7 +192,7 @@
         </div>
         <!-- Navbar & Hero End -->
 
-        {% if globalVar["zero_results"]%}
+        {% if session["zero_results"]%}
         <!-- About Start -->
         <div class="container-xxl py-5">
             <div class="container px-lg-5">
@@ -204,7 +204,7 @@
                         </div>
                     </div>
                     <div class="col-lg-6 wow fadeInUp mt-0" data-wow-delay="0.1s">
-                        <p class="mb-3" style="text-align: justify;">Infelizmente, não foram encontrados quaisquer resultados relativos à pesquisa <u>{{ globalVar['query'] }}</u> nas {{ globalVar['total_amount_of_news'] }} notícias analisadas.<br>Isto pode dever-se a razões como:</p>
+                        <p class="mb-3" style="text-align: justify;">Infelizmente, não foram encontrados quaisquer resultados relativos à pesquisa <u>{{ session['query'] }}</u> nas {{ session['total_amount_of_news'] }} notícias analisadas.<br>Isto pode dever-se a razões como:</p>
                         <div class="row g-3">
                             <div class="col-sm-6">
                                 <h6 class="mb-4 text-center"><i class="fa fa-times text-primary me-2"></i>Tópico não disponível</h6>
@@ -282,10 +282,10 @@
                     <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.1s">
                         <div class="section-title position-relative mb-4 pb-2">
                             <h6 class="position-relative text-primary ps-4">Resultados</h6>
-                            <h2 class="mt-2">Foram encontrados {{ globalVar['query_amountofnews'] }} resultados!</h2>
+                            <h2 class="mt-2">Foram encontrados {{ session['query_amountofnews'] }} resultados!</h2>
                         </div>
                         <p class="mb-3" style="text-align: justify;">
-                            Foram encontradas {{ globalVar['query_amountofnews'] }} notícias sobre o tópico <u>{{ globalVar['query'] }}</u>, com a primeira notícia a {{ globalVar['query_firstnews'] }}.
+                            Foram encontradas {{ session['query_amountofnews'] }} notícias sobre o tópico <u>{{ session['query'] }}</u>, com a primeira notícia a {{ session['query_firstnews'] }}.
                             <br>Pode agora explorar as fontes de informação que mais escreveram sobre o seu tópico e como é que a sua perceção tem vindo a evoluir ao longo do tempo, através dos gráficos interativos.
                         </p>
                         <div class="row g-3">
@@ -297,11 +297,11 @@
                         <p class="mb-3" style="text-align: justify;">Passe com o rato sobre os gráficos para descobrir mais informações.</p>
                     </div>
                     <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.1s">
-                        {{ globalVar['pie_sources'] | safe }}
+                        {{ session['pie_sources'] | safe }}
                     </div>
                 </div>
                 <div class="row g-5 wow zoomIn" data-wow-delay="0.1s">
-                    {{ globalVar['ts_news'] | safe }}
+                    {{ session['ts_news'] | safe }}
                 </div>
             </div>
         </div>
@@ -317,8 +317,8 @@
                 </div>
                 <div class="row align-items-center" style="height: 250px;">
                     <div class="col-12 col-md-6">
-                        <h3>Descubra Ligações a <u>{{ globalVar['query'] }}</u></h3>
-                        <small style="text-align: justify; display: block;">Escolha um tópico para verificar se está relacionado com <u>{{ globalVar['query'] }}</u>, e se estiver, qual é a perceção dessa relação, as fontes de informação que a mais mencionam e como é que esta tem vindo a evoluir ao longo dos anos.</small>
+                        <h3>Descubra Ligações a <u>{{ session['query'] }}</u></h3>
+                        <small style="text-align: justify; display: block;">Escolha um tópico para verificar se está relacionado com <u>{{ session['query'] }}</u>, e se estiver, qual é a perceção dessa relação, as fontes de informação que a mais mencionam e como é que esta tem vindo a evoluir ao longo dos anos.</small>
                         <div class="position-relative w-100 mt-3 rounded-pill" style="border:2px solid #2124B1;">
                             <input id="relationInput" class="form-control border-0 rounded-pill w-100 ps-4 pe-5" type="text" placeholder="Escolha um tópico para verificar..." style="height: 48px;">
                             <button onclick="redirectToRelation()" type="submit" class="btn shadow-none position-absolute top-0 end-0 mt-1 me-2"><i class="fa fa-search text-primary fs-4"></i></button>
@@ -350,30 +350,30 @@
         <!-- Custom Word Search End -->
         {% endif %}
         <!-- Custom Word Info Start -->
-        {% if globalVar['topicrelation'] %}
+        {% if session['topicrelation'] %}
         <div id="topic-relation" class="container-xxl py-5" data-wow-delay="0.1s">
             <div class="container px-lg-5">
                 <div class="row g-5">
                     <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
                         <div class="section-title position-relative mb-4 pb-2">
-                            <h2 class="mt-2"><u>{{ globalVar['query'] }}</u> & <u>{{ globalVar['related_topic'] }}</u></h2>
+                            <h2 class="mt-2"><u>{{ session['query'] }}</u> & <u>{{ session['related_topic'] }}</u></h2>
                         </div>
-                        {% if not globalVar['topicrelation_exists'] %}
-                            <p class="mb-3" style="text-align: justify;">Não foi encontrada qualquer relação entre <u>{{ globalVar['query'] }}</u> e <u>{{ globalVar['related_topic'] }}</u> nas {{ globalVar['query_amountofnews'] }} notícias sobre <u>{{ globalVar['query'] }}</u>.<br>Isto pode dever-se a razões como:</p>
+                        {% if not session['topicrelation_exists'] %}
+                            <p class="mb-3" style="text-align: justify;">Não foi encontrada qualquer relação entre <u>{{ session['query'] }}</u> e <u>{{ session['related_topic'] }}</u> nas {{ session['query_amountofnews'] }} notícias sobre <u>{{ session['query'] }}</u>.<br>Isto pode dever-se a razões como:</p>
                             <div class="row g-3">
                                 <div class="col-sm-4">
                                     <h6 class="mb-4 text-center"><i class="fa fa-times text-primary me-2"></i>Relação inexistente</h6>
                                 </div>
                                 <div class="col-sm-4">
-                                    <h6 class="mb-4 text-center"><i class="fa fa-times text-primary me-2"></i>Menções insuficentes sobre <u>{{ globalVar['related_topic'] }}</u></h6>
+                                    <h6 class="mb-4 text-center"><i class="fa fa-times text-primary me-2"></i>Menções insuficentes sobre <u>{{ session['related_topic'] }}</u></h6>
                                 </div>
                                 <div class="col-sm-4">
                                     <h6 class="mb-4 text-center"><i class="fa fa-times text-primary me-2"></i>Erro ortográfico</h6>
                                 </div>
                             </div>
-                            <p class="mb-0" style="text-align: justify;">Pode agora optar por verificar outra ligação entre tópicos à sua escolha, ou uma aleatória, por exemplo {{ globalVar['recomendations_topicrelation'] | safe }}.</p>
+                            <p class="mb-0" style="text-align: justify;">Pode agora optar por verificar outra ligação entre tópicos à sua escolha, ou uma aleatória, por exemplo {{ session['recomendations_topicrelation'] | safe }}.</p>
                         {% else %}
-                            <p class="mb-4" style="text-align: justify;">Nas {{ globalVar['query_amountofnews'] }} notícias sobre <u>{{ globalVar['query'] }}</u>, foram encontradas {{ globalVar['count_topicrelation'] }} menções em relação a <u>{{ globalVar['related_topic'] }}</u>.<br>Utilizando as ferramentas da Lupa Digital disponíveis poderá agora verificar quanto à relação:</p>
+                            <p class="mb-4" style="text-align: justify;">Nas {{ session['query_amountofnews'] }} notícias sobre <u>{{ session['query'] }}</u>, foram encontradas {{ session['count_topicrelation'] }} menções em relação a <u>{{ session['related_topic'] }}</u>.<br>Utilizando as ferramentas da Lupa Digital disponíveis poderá agora verificar quanto à relação:</p>
                             <div class="row g-3">
                                 <div class="col-sm-3"><h6 class="mb-5 text-center"><i class="fa fa-check text-primary me-2"></i>Fontes de Informação</h6></div>
                                 <div class="col-sm-3"><h6 class="mb-5 text-center"><i class="fa fa-check text-primary me-2"></i>Perceção do Sentimento</h6></div>
@@ -385,11 +385,11 @@
                 </div>
             </div>
 
-            {% if globalVar['topicrelation_exists'] %}
+            {% if session['topicrelation_exists'] %}
             <div class="container px-lg-5 wow fadeInUp" data-wow-delay="0.1s">
                 <div class="row g-4">
                     <div id="relation-leftcol" class="col-12 col-md-3" style="position: relative; overflow-y: auto;">
-                        <iframe srcdoc='{{ globalVar["sources_topicrelation"] }}'
+                        <iframe srcdoc='{{ session["sources_topicrelation"] }}'
                                 scrolling="no"
                                 style="height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; position: absolute; top: -10%; left: 0%; z-index: 1;">
                         </iframe>
@@ -406,7 +406,7 @@
                         </div>
                     </div>
                     <div id="relation-rightcol" class="col-12 col-md-9 align-content-center" style="padding-right: 1em;">
-                        {{ globalVar['ts_topicrelation'] | safe }}
+                        {{ session['ts_topicrelation'] | safe }}
                     </div>                   
                 </div>
             </div>
@@ -415,7 +415,7 @@
                     let percentage = ((sentiment + 1) / 2) * 100;
                     document.getElementById("arrow").style.left = percentage + "%";
                 }
-                updateSentiment({{ globalVar['sentiment_topicrelation'] }});
+                updateSentiment({{ session['sentiment_topicrelation'] }});
             </script>
             <script>
                 function matchColumnHeights() {
@@ -438,12 +438,12 @@
             {% endif %}
         </div>
         
-        {% if globalVar['topicrelation_exists'] %}
+        {% if session['topicrelation_exists'] %}
         <div class="container-xxl bg-primary testimonial py-4 wow fadeInUp" data-wow-delay="0.1s">
-            <small class="text-white d-block text-center" style="text-align: center; padding-top: 1em;">Encontre aqui algumas notícias arquivadas pelo <a href="https://arquivo.pt" target="_blank" style="text-decoration: none; color: inherit;">Arquivo.pt</a> que contêm a relação <u>{{ globalVar['query'] }}</u> & <u>{{ globalVar['related_topic'] }}</u>.</small>
+            <small class="text-white d-block text-center" style="text-align: center; padding-top: 1em;">Encontre aqui algumas notícias arquivadas pelo <a href="https://arquivo.pt" target="_blank" style="text-decoration: none; color: inherit;">Arquivo.pt</a> que contêm a relação <u>{{ session['query'] }}</u> & <u>{{ session['related_topic'] }}</u>.</small>
             <div class="container px-lg-5" style="padding-bottom:3.5rem; padding-top: 2em;">
                 <div class="owl-carousel testimonial-carousel">
-                    {{ globalVar['news_topicrelation'] | safe }}
+                    {{ session['news_topicrelation'] | safe }}
                 </div>
             </div>
         </div>
@@ -452,7 +452,7 @@
         <!-- Custom Word Info End -->
 
         <!-- Start Redirect to Graph -->
-        {% if not globalVar["zero_results"]%}
+        {% if not session["zero_results"]%}
         <div class="container-xxl py-5">
             <div class="border-top border-light my-4"></div>
             <div class="container px-lg-5">
@@ -547,7 +547,7 @@
     <!-- Loading the Graph Page Script-->
     <script>
         function openGraph() {
-            {% if globalVar['query'] != globalVar['graph_html'][0] %}
+            {% if session['query'] != session['graph_html'][0] %}
             
             // Show the loading indicator
             document.getElementById("loadingIndicatorGraph").style.display = "flex";
