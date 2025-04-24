@@ -51,14 +51,20 @@ atexit.register(lambda: spark.stop())
 df = spark.read.parquet("../data/news_processed")
 
 # results for query searches by session_id (cache)
-def delete_result_file(session_id, path):
+results = TTLCache(maxsize=50, ttl=300)
+def cleanup_untracked_pickles(cache):
+    """Delete all pickle folders not currently in cache."""
     try:
-        if os.path.exists(path):
-            shutil.rmtree(path)
-            print(f"Deleted cached result for {session_id}: {path}")
+        active_sessions = set(str(sid) for sid in cache.keys())
+        for entry in os.listdir("/tmp"):
+            full_path = os.path.join("/tmp", entry)
+            if entry.startswith("lupa_result_"):
+                session_id = entry.replace("lupa_result_", "")
+                if session_id not in active_sessions:
+                    print(f"Deleting old cache: {full_path}")
+                    shutil.rmtree(full_path, ignore_errors=True)
     except Exception as e:
-        print(f"Failed to delete {path}: {e}")
-results = TTLCache(maxsize=50, ttl=300, callback=delete_result_file)
+        print(f"Cleanup failed: {e}")
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -127,6 +133,7 @@ def pesquisa():
     session["topicrelation"] = False
 
     # free up memory
+    cleanup_untracked_pickles(results)
     session["graph_html"] = [None, None]
     session["count_topicrelation"] = None
     session["sentiment_topicrelation"] = None
