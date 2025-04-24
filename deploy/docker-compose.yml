@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+  lupa_digital:
+    image: hugoverissimo21/lupa-digital-25:latest
+    container_name: lupa_digital
+    restart: unless-stopped
+    environment:
+      SPARK_CORES: "*"
+      SPARK_MEM: "6g"
+    expose:
+      - "5000"
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: unless-stopped
+    depends_on:
+      - lupa_digital
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    restart: unless-stopped
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+    command: certonly --webroot --webroot-path=/var/www/certbot --email hugoverissimo@ua.pt --agree-tos --no-eff-email --force-renewal -d lupa-digital.pt
