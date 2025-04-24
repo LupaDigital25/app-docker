@@ -45,6 +45,7 @@ docker run -it --entrypoint bash hugoverissimo21/lupa-digital-25
 ## deploy
 
 # 1. Clone repo metadata only (no files yet)
+rm -rf ~/app-docker
 git clone --filter=blob:none --no-checkout https://github.com/LupaDigital25/app-docker.git
 cd app-docker
 
@@ -63,7 +64,6 @@ cd deploy
 
 ###
 
-cd deploy
 docker-compose up -d
 docker-compose run --rm certbot
 docker restart nginx
