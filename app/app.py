@@ -269,6 +269,6 @@ def relacao():
     return render_template('info.html', session=session, scroll_to_relation=True)
     
 
-if __name__ == '__main__' and True == False:
+if __name__ == '__main__' and True == True:
     #app.run(debug=True)
     app.run(host="0.0.0.0", port=5000, debug=False)

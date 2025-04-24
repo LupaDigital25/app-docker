@@ -36,5 +36,8 @@ EXPOSE 5000
 # Set working dir to /lupadigital/app to run the app from there
 WORKDIR /lupadigital/app
 
-# Run the app with Gunicorn (2 workers)
-CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "--timeout", "180", "--preload", "app:app"]
+# Run the app with Gunicorn (2 workers) (REMOVE IF NAME = MAIN IF RUNNING GUNICORN)
+#CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "--timeout", "180", "--preload", "app:app"]
+
+# Run the Flask app directly (development server)
+CMD ["python", "app.py"]
