@@ -44,9 +44,11 @@ docker run -it --entrypoint bash hugoverissimo21/lupa-digital-25
 
 #### deploy using https (to be finished):
 
-- remove the old deploy folder
+- remove the old deploy folder and stuff
 ```bash
+docker-compose down
 rm -rf ~/app-docker
+docker system prune -af
 ```
 
 - clone the deply folder from the repo
@@ -61,6 +63,7 @@ git checkout main
 - run the docker compose
 ```bash
 cd deploy
+docker-compose pull
 docker-compose up -d
 docker-compose run --rm certbot
 docker restart nginx
