@@ -66,7 +66,7 @@ atexit.register(lambda: spark.stop())
 df = spark.read.parquet("../data/news_processed")
 
 # sessions cached results
-cached_sessions = TTLCache(maxsize=50, ttl=300)
+cached_sessions = TTLCache(maxsize=50, ttl=3600)
 def cleanup_untracked_pickles(cache):
     """Delete all pickle folders not currently in cache."""
     try:
@@ -91,7 +91,7 @@ app.secret_key = "abracadabra2"
 def setup_user():
     global cached_sessions
 
-    if "session_id" not in session:
+    if "session_id" not in session or session.get("session_id", "") not in cached_sessions:
         session["session_id"] = str(uuid.uuid4())
 
         # create a new session
