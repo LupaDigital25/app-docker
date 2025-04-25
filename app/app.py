@@ -36,10 +36,11 @@ def save_to_pickle(session_id, filename, data):
     return file_path
 
 def load_from_pickle(file_path):
-    if os.path.exists(file_path):
+    try:
         with open(file_path, "rb") as f:
             return pickle.load(f)
-    return None
+    except:
+        return None
 
 
 # Environment variables
@@ -112,7 +113,7 @@ def setup_user():
 @app.route('/')
 def home():    
     return render_template('index.html', session=session,
-                           graph_html_0 = load_from_pickle(cached_sessions[session["session_id"]]["graph_html"][0]),
+                           graph_html_0 = load_from_pickle(cached_sessions[session["session_id"]]["graph_html"])[0])
 
 @app.route('/sobre')
 def sobre():
@@ -122,15 +123,16 @@ def sobre():
         return render_template("404.html", session=session)
     
     return render_template("info.html", session=session,
-                           wordcloud = load_from_pickle(cached_sessions[session["session_id"]]["wordcloud"]),
-                           pie_sources = load_from_pickle(cached_sessions[session["session_id"]]["pie_sources"]),
-                           ts_news = load_from_pickle(cached_sessions[session["session_id"]]["ts_news"]),
-                           count_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["count_topicrelation"]),
-                           sentiment_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["sentiment_topicrelation"]),
-                           sources_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["sources_topicrelation"]),
-                           ts_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["ts_topicrelation"]),
-                           news_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["news_topicrelation"]),
-                           recomendations_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["recomendations_topicrelation"]))
+                           wordcloud = load_from_pickle(cached_sessions[session["session_id"]].get("wordcloud", "")),
+                           pie_sources = load_from_pickle(cached_sessions[session["session_id"]].get("pie_sources", "")),
+                           ts_news = load_from_pickle(cached_sessions[session["session_id"]].get("ts_news", "")),
+                           count_topicrelation = load_from_pickle(cached_sessions[session["session_id"]].get("count_topicrelation", "")),
+                           sentiment_topicrelation = load_from_pickle(cached_sessions[session["session_id"]].get("sentiment_topicrelation", "")),
+                           sources_topicrelation = load_from_pickle(cached_sessions[session["session_id"]].get("sources_topicrelation", "")),
+                           ts_topicrelation = load_from_pickle(cached_sessions[session["session_id"]].get("ts_topicrelation", "")),
+                           news_topicrelation = load_from_pickle(cached_sessions[session["session_id"]].get("news_topicrelation", "")),
+                           recomendations_topicrelation = load_from_pickle(cached_sessions[session["session_id"]].get("recomendations_topicrelation", "")),
+                           graph_html_0 = load_from_pickle(cached_sessions[session["session_id"]]["graph_html"])[0])
 
 @app.route('/grafo')
 def grafo():
@@ -196,7 +198,7 @@ def pesquisa():
                                                                              [query, None])
         return render_template('info.html', session=session,
                                wordcloud = load_from_pickle(cached_sessions[session["session_id"]]["wordcloud"]),
-                               graph_html_0 = load_from_pickle(cached_sessions[session["session_id"]]["graph_html"][0])
+                               graph_html_0 = load_from_pickle(cached_sessions[session["session_id"]]["graph_html"])[0])
     
     # process the query results
     # create key value pairs for each seen keyword
@@ -234,6 +236,8 @@ def pesquisa():
         result.map(lambda x: (x[0], x[1][0])).take(5000)
     )
     result_path = f"/tmp/lupa_result_{session['session_id']}/result"
+    if os.path.exists(result_path):
+        shutil.rmtree(result_path)
     result.saveAsPickleFile(result_path)
     cached_sessions[session["session_id"]]["result"] = result_path
     del result
@@ -304,16 +308,20 @@ def relacao():
                                                                                          "sources_topicrelation",
                                                                                          sources_topicrelation(filtered[3]))
         # relation time series
-        ts_topicrelation = ts_topicrelation(load_from_pickle(cached_sessions[session["session_id"]]["news_by_month"]),
+        ts_topicrelation_var = ts_topicrelation(load_from_pickle(cached_sessions[session["session_id"]]["news_by_month"]),
                                                        filtered[1],
                                                        related_topic,
                                                        session['query'])
         cached_sessions[session["session_id"]]["ts_topicrelation"] = save_to_pickle(session["session_id"],
-                                                                                     "ts_topicrelation", ts_topicrelation)
+                                                                                     "ts_topicrelation", ts_topicrelation_var)
         # relation news
         cached_sessions[session["session_id"]]["news_topicrelation"] = save_to_pickle(session["session_id"],
                                                                                       "news_topicrelation",
                                                                                       news_topicrelation(filtered[4]))
+        
+        cached_sessions[session["session_id"]]["recomendations_topicrelation"] = save_to_pickle(session["session_id"],
+                                                                                                "recomendations_topicrelation",
+                                                                                                "")
         
     # or return a random selection of topics
     else:
@@ -328,6 +336,20 @@ def relacao():
         cached_sessions[session["session_id"]]["recomendations_topicrelation"] = save_to_pickle(session["session_id"],
                                                                                                 "recomendations_topicrelation",
                                                                                                 recomendation_output[:-2])
+        
+        cached_sessions[session["session_id"]]["count_topicrelation"] = save_to_pickle(session["session_id"],
+                                                                                     "count_topicrelation", "")
+        cached_sessions[session["session_id"]]["sentiment_topicrelation"] = save_to_pickle(session["session_id"],
+                                                                                           "sentiment_topicrelation", "")
+        cached_sessions[session["session_id"]]["sources_topicrelation"] = save_to_pickle(session["session_id"],
+                                                                                         "sources_topicrelation",
+                                                                                         "")
+        cached_sessions[session["session_id"]]["ts_topicrelation"] = save_to_pickle(session["session_id"],
+                                                                                     "ts_topicrelation", "")
+        cached_sessions[session["session_id"]]["news_topicrelation"] = save_to_pickle(session["session_id"],
+                                                                                      "news_topicrelation",
+                                                                                      "")
+        
 
     session["topicrelation"] = True
     return render_template('info.html', session=session, scroll_to_relation=True,
@@ -339,9 +361,10 @@ def relacao():
                            sources_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["sources_topicrelation"]),
                            ts_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["ts_topicrelation"]),
                            news_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["news_topicrelation"]),
-                           recomendations_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["recomendations_topicrelation"]))
+                           recomendations_topicrelation = load_from_pickle(cached_sessions[session["session_id"]]["recomendations_topicrelation"]),
+                           graph_html_0 = load_from_pickle(cached_sessions[session["session_id"]]["graph_html"])[0])
 
 
 if __name__ == '__main__' and True == True:
     #app.run(debug=True)
-    app.run(host="0.0.0.0", port=5000, debug=True) # PUT TO FALSE LATER ON
+    app.run(host="0.0.0.0", port=5000, debug=False)
