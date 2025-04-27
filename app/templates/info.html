@@ -262,13 +262,6 @@
                                 window.location.href = `/pesquisa?topico=${encodeURIComponent(inputValue)}`;
                             }, 500);
                         }
-                        // Handle back navigation: reset the page state
-                        window.addEventListener("pageshow", function(event) {
-                            if (event.persisted || performance.getEntriesByType("navigation")[0].type === "back_forward") {
-                                // Force a hard reload to ensure page is fresh
-                                window.location.reload(true); // true is legacy, but still respected by some browsers
-                            }
-                        });
                     </script>
                 </div>
             </div>
@@ -566,6 +559,15 @@
             }, 0);
             {% endif %}
         }
+    </script>
+
+    <script>
+        window.addEventListener('pageshow', function(event) {
+            // This fires when the page is shown (even from back/forward cache)
+            document.getElementById("loadingIndicatorGraph").style.display = "none";
+            document.body.style.overflow = 'auto'; 
+            document.getElementById("loadingIndicator").style.display = "none";
+        });
     </script>
     
 </body>

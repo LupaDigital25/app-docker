@@ -42,6 +42,10 @@ def load_from_pickle(file_path):
     except:
         return None
 
+def merge_dicts(d1, d2):
+    for k, v in d2.items():
+        d1[k] = d1.get(k, 0) + v
+    return d1
 
 # Environment variables
 spark_cores = os.getenv("SPARK_CORES", "*")
@@ -63,7 +67,7 @@ spark = SparkSession.builder \
 atexit.register(lambda: spark.stop())
 
 # read the data
-df = spark.read.parquet("../data/news_processed")
+df = spark.read.parquet("../data/news_processed").cache()
 
 # sessions cached results
 cached_sessions = TTLCache(maxsize=50, ttl=3600)
@@ -170,14 +174,20 @@ def pesquisa():
 
     # update
     session["search_done"] = True
-    session["zero_results"] = False
     session["topicrelation"] = False
-
-    # free up memory
-    cleanup_untracked_pickles(cached_sessions)
 
     # query requested
     query = request.args.get('topico', '')
+    
+    if session.get("query", "") == query:
+        return render_template('info.html', session=session,
+                               wordcloud = load_from_pickle(cached_sessions[session["session_id"]].get("wordcloud", "")),
+                               pie_sources = load_from_pickle(cached_sessions[session["session_id"]].get("pie_sources", "")),
+                               ts_news = load_from_pickle(cached_sessions[session["session_id"]].get("ts_news", "")))
+    
+    # free up memory
+    cleanup_untracked_pickles(cached_sessions)
+
     session['query'] = query
 
     # data filtering
@@ -200,6 +210,7 @@ def pesquisa():
                                wordcloud = load_from_pickle(cached_sessions[session["session_id"]]["wordcloud"]),
                                graph_html_0 = load_from_pickle(cached_sessions[session["session_id"]]["graph_html"])[0])
     
+    session["zero_results"] = False
     # process the query results
     # create key value pairs for each seen keyword
     result = df_with_query.rdd.flatMap(lambda row: [
@@ -214,9 +225,9 @@ def pesquisa():
     # reduce the key value pairs to a single value
     result = result.reduceByKey(lambda a, b: (
         a[0] + b[0],  # sum counts
-        {ts: a[1].get(ts, 0) + b[1].get(ts, 0) for ts in set(a[1]) | set(b[1])},  # merge timestamp dictionaries
+        merge_dicts(a[1], b[1]),  # merge timestamp dictionaries
         a[2] + b[2],  # sum sentiments
-        {source: a[3].get(source, 0) + b[3].get(source, 0) for source in set(a[3]) | set(b[3])},  # merge source dictionaries
+        merge_dicts(a[3], b[3]),  # merge source dictionaries
         a[4] + b[4]  # concatenate news lists
     ))
     # remove where key is same as standardized keyword
@@ -261,8 +272,6 @@ def pesquisa():
     ts_news, session["query_firstnews"] = timeseries_news(df_with_query, news_by_month, query)
     cached_sessions[session["session_id"]]["ts_news"] = save_to_pickle(session["session_id"],
                                                                              "ts_news", ts_news) 
-    # info: topic relation deactivated
-    session["topicrelation"] = False
 
     # render the info template
     return render_template('info.html', session=session,
