@@ -47,6 +47,20 @@ def merge_dicts(d1, d2):
         d1[k] = d1.get(k, 0) + v
     return d1
 
+def get_spark_session():
+    global spark
+    try:
+        _ = spark.sparkContext.version
+    except Exception:
+        spark = SparkSession.builder \
+            .appName("LupaDigital") \
+            .master(f"local[{spark_cores}]") \
+            .config("spark.ui.enabled", "false") \
+            .config("spark.driver.memory", f"{spark_mem}") \
+            .config("spark.executor.memory", f"{spark_mem}") \
+            .getOrCreate()
+    return spark
+
 # Environment variables
 spark_cores = os.getenv("SPARK_CORES", "*")
 spark_mem = os.getenv("SPARK_MEM", "8g")
@@ -115,7 +129,7 @@ def setup_user():
                                                                              [None, None])
 
 @app.route('/')
-def home():    
+def home():
     return render_template('index.html', session=session,
                            graph_html_0 = load_from_pickle(cached_sessions[session["session_id"]]["graph_html"])[0])
 
@@ -141,6 +155,7 @@ def sobre():
 @app.route('/grafo')
 def grafo():
     global cached_sessions
+    spark = get_spark_session()
 
     if not session.get("search_done", False) or session.get("zero_results", True):
         return render_template('404.html', session=session)
@@ -156,11 +171,8 @@ def grafo():
     if graph_html[0] != session["query"]:
         result_path = cached_sessions[session["session_id"]]["result"]
         result = spark.sparkContext.pickleFile(result_path)
-        top_n = (
-            result.sortBy(lambda x: x[1][0], ascending=False)
-                .take(125)
-        )
-        min_count = min(x[1][0] for x in top_n)
+        top_n = result.top(125, key=lambda x: x[1][0])
+        min_count = top_n[-1][1][0]
         graph_html = [session["query"], create_keyword_graph(dict(top_n), session["query"], min_count)]
         cached_sessions[session["session_id"]]["graph_html"] = save_to_pickle(session["session_id"],
                                                                               "graph_html", graph_html)
@@ -171,6 +183,7 @@ def grafo():
 @app.route('/pesquisa', methods=['GET'])
 def pesquisa():
     global cached_sessions
+    spark = get_spark_session()
 
     # update
     session["search_done"] = True
@@ -283,7 +296,7 @@ def pesquisa():
 
 @app.route('/relacao', methods=['GET'])
 def relacao():
-    global results
+    spark = get_spark_session()
 
     if not session.get("search_done", False) or session.get("zero_results", True):
         return render_template('404.html', session=session)
