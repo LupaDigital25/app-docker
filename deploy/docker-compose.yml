@@ -31,7 +31,12 @@ services:
     volumes:
       - ./certbot/www:/var/www/certbot
       - ./certbot/conf:/etc/letsencrypt
-    command: certonly --webroot --webroot-path=/var/www/certbot \
-            --email hugoverissimo@ua.pt --agree-tos --no-eff-email \
-            --force-renewal -d lupa-digital.pt -d www.lupa-digital.pt
-
+    command: >
+      certonly
+      --webroot
+      --webroot-path=/var/www/certbot
+      --email hugoverissimo@ua.pt
+      --agree-tos
+      --no-eff-email
+      -d lupa-digital.pt
+      -d www.lupa-digital.pt
