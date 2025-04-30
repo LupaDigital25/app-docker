@@ -2,7 +2,7 @@
 
 This repository contains the Docker-based deployment configuration for the Lupa Digital Flask web application. It includes a `docker-compose.yml` file and associated configuration files needed to launch the application and its dependencies in a containerized environment. Designed for portability and ease of deployment, this setup allows seamless integration with Spark and supports production-ready hosting on platforms like DigitalOcean.
 
-It also creates a Docker image for the app, which can be used to run the application locally or in production. The image is built using a Dockerfile and includes all necessary dependencies and configurations.
+It also automates the creation of a Docker image for the application at each commit. The image is built from a Dockerfile and includes all necessary dependencies and configurations, allowing the app to be run locally or deployed in a production environment.
 
 ## Project Structure
 
@@ -10,11 +10,11 @@ It also creates a Docker image for the app, which can be used to run the applica
 app-docker/
 │
 ├── .github/workflows/              # Create Docker image at each commit
-|
+│
 ├── app/                            # Main application code
 │   ├── app.py                      # Main Flask application
 │   ├── ...                         # Other application files (e.g., static, templates)
-|
+│
 ├── data/news_processed/            # Processed data files
 │
 ├── deploy/
