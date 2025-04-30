@@ -5,6 +5,9 @@ set -e
 CERT_PATH="./certbot/conf/live/lupa-digital.pt/fullchain.pem"
 NGINX_DIR="./nginx"
 
+echo "Pulling latest Docker images..."
+docker-compose pull
+
 echo "Checking if certificate exists..."
 
 if [ ! -f "$CERT_PATH" ]; then
