@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     environment:
       SPARK_CORES: "3"
-      SPARK_MEM: "6g"
+      SPARK_MEM: "5632m"
     expose:
       - "5000"
     healthcheck:

@@ -16,6 +16,7 @@ import shutil
 from cachetools import TTLCache
 import pickle
 import traceback
+import sys
 
 # Local
 from graph import create_keyword_graph
@@ -79,7 +80,7 @@ def get_spark_session():
 
 # Environment variables
 spark_cores = os.getenv("SPARK_CORES", "*")
-spark_mem = os.getenv("SPARK_MEM", "8g")
+spark_mem = os.getenv("SPARK_MEM", "6g")
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -157,7 +158,8 @@ def health():
             _ = spark.sparkContext.version
             return "OK", 200
         except Exception as e:
-            return f"Spark failed: {str(e)}", 500
+            print("Spark JVM dead. Leaving container.")
+            sys.exit(1) # force container to die
 
 @app.route('/')
 def home():
