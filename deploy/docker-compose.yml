@@ -6,10 +6,15 @@ services:
     container_name: lupa_digital
     restart: unless-stopped
     environment:
-      SPARK_CORES: "*"
+      SPARK_CORES: "3"
       SPARK_MEM: "6g"
     expose:
       - "5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   nginx:
     image: nginx:latest

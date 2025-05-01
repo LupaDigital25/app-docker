@@ -15,6 +15,7 @@ import uuid
 import shutil
 from cachetools import TTLCache
 import pickle
+import traceback
 
 # Local
 from graph import create_keyword_graph
@@ -50,8 +51,19 @@ def merge_dicts(d1, d2):
 def get_spark_session():
     global spark
     try:
-        _ = spark.sparkContext.version
+        # is JVM alive?
+        _ = spark.sparkContext.version  
+        return spark
     except Exception:
+        try:
+            spark.stop()
+        except:
+            # ignore any errors
+            pass
+        # force a new session
+        spark = None
+    # create a new session if the previous one is not alive
+    try:
         spark = SparkSession.builder \
             .appName("LupaDigital") \
             .master(f"local[{spark_cores}]") \
@@ -59,7 +71,11 @@ def get_spark_session():
             .config("spark.driver.memory", f"{spark_mem}") \
             .config("spark.executor.memory", f"{spark_mem}") \
             .getOrCreate()
-    return spark
+        return spark
+    # if there is an error, print the traceback and raise the exception
+    except Exception:
+        traceback.print_exc()
+        raise
 
 # Environment variables
 spark_cores = os.getenv("SPARK_CORES", "*")
@@ -127,6 +143,21 @@ def setup_user():
         cached_sessions[session["session_id"]]["graph_html"] = save_to_pickle(session["session_id"],
                                                                              "graph_html",
                                                                              [None, None])
+
+@app.route('/health')
+def health():
+    """healthcheck for docker"""
+    global spark
+    try:
+         _ = spark.sparkContext.version
+         return "OK", 200
+    except:
+        try:
+            spark = get_spark_session()
+            _ = spark.sparkContext.version
+            return "OK", 200
+        except Exception as e:
+            return f"Spark failed: {str(e)}", 500
 
 @app.route('/')
 def home():
